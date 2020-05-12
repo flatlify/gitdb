@@ -32,11 +32,11 @@ class GitDB {
     return new Promise<string>(resolve => resolve('todo: replace logic to delete collection and return its name'))
   }
 
-  public async commit(message: string | undefined): Promise<string[]> {
+  public async commit(files: string[], message: string | undefined): Promise<string[]> {
     return new Promise<string[]>(resolve => resolve(['todo: replace logic to return list of commited files']))
   }
 
-  public async rollback(): Promise<void> {
+  public async reset(files: string[] | undefined): Promise<void> {
     return Promise.resolve();
   }
 }
