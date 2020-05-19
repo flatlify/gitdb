@@ -1,20 +1,33 @@
 import fsWithCallbacks from 'fs';
 import fse from 'fs-extra';
+import path from 'path';
+import Collection from './collection';
+import isoGit from 'isomorphic-git';
+import findGitRoot from 'find-git-root';
+
 const fs = fsWithCallbacks.promises;
 
 interface Config {
-  autoCommit: boolean;
-  cache: string | null;
+  autoCommit?: boolean;
+  cache?: string | null;
   dbDir: string;
 }
-type schema = Record<string, unknown[]>;
+interface Author {
+  name: string;
+  email: string;
+}
+
+type schema = Record<string, Collection<any>>;
 class GitDB {
-  private config: Config;
+  config: Config;
   data: schema;
+  gitRoot: string;
 
   constructor(config: Config) {
     this.config = config;
     this.data = {};
+    /** ".." because it returns `path/to/file/.git` */
+    this.gitRoot = path.resolve(findGitRoot(config.dbDir), '..');
   }
 
   /**
@@ -30,7 +43,7 @@ class GitDB {
 
     const collectionPromises = collectionDirectoryNames.map(
       async (collectionName) => {
-        this.data[collectionName] = [];
+        // this.data[collectionName] = new Collection(collectionName, this);
         const collectionPath = `${this.config.dbDir}/${collectionName}`;
 
         const documentNames = await fs.readdir(collectionPath);
@@ -50,7 +63,7 @@ class GitDB {
 
   public async create(collectionName: string): Promise<string> {
     await fs.mkdir(this.config.dbDir);
-    this.data[collectionName] = [];
+    // this.data[collectionName] = new Collection(collectionName, this);
     return collectionName;
   }
 
@@ -66,21 +79,34 @@ class GitDB {
   }
 
   public async commit(
-    files: string[],
-    message: string | undefined
+    filePaths: string[],
+    message: string | undefined = '',
+    remove: boolean,
+    author: Author
   ): Promise<string[]> {
-    // const gitAddPromises = filePaths.map(async (filepath) => {
-    //   const relativeFilePath = path.relative(repositoryRoot, filepath);
-    //   if (!remove) {
-    //     await isoGit.add({ dir: repositoryRoot, filepath: relativeFilePath });
-    //   } else {
-    //     await isoGit.remove({
-    //       dir: repositoryRoot,
-    //       filepath: relativeFilePath
-    //     });
-    //   }
-    // });
-    // resolve(['todo: replace logic to return list of commited files'])
+    const gitAddPromises = filePaths.map(async (filepath) => {
+      const relativeFilePath = path.relative(this.gitRoot, filepath);
+      if (!remove) {
+        await isoGit.add({ dir: this.gitRoot, filepath: relativeFilePath, fs });
+      } else {
+        await isoGit.remove({
+          dir: this.gitRoot,
+          filepath: relativeFilePath,
+          fs
+        });
+      }
+    });
+    await Promise.all(gitAddPromises);
+    const sha = await isoGit.commit({
+      dir: this.gitRoot,
+      author: {
+        name: author.name,
+        email: author.email
+      },
+      message,
+      fs
+    });
+    return filePaths;
   }
 
   public async reset(files: string[] | undefined): Promise<void> {
