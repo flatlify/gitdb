@@ -43,7 +43,6 @@ class GitDB {
 
     const collectionPromises = collectionDirectoryNames.map(
       async (collectionName) => {
-        // this.data[collectionName] = new Collection(collectionName, this);
         const collectionPath = `${this.config.dbDir}/${collectionName}`;
 
         const documentNames = await fs.readdir(collectionPath);
@@ -123,22 +122,3 @@ class GitDB {
 }
 
 export default GitDB;
-
-const db = new GitDB({ dbDir: `./db` });
-
-db.createCollection('my-collection').then(async () => {
-  // await db.collections['my-collection'].insert({ id: 5 });
-  await db.readDb();
-  const myCollection = db.collections['my-collection'];
-  // await myCollection.insert({ da: 'net' });
-  // await myCollection.update(
-  //   { id: '0.5442273377574862' },
-  //   { dadaad: 'dadadada' }
-  // );
-  db.commit(['./db/my-collection/0.5442273377574862.json'], 'qq', false, {
-    name: 'name',
-    email: 'email'
-  });
-  // await db.delete('my-collection');
-  // await myCollection.delete({ id: '0.9226278074221699' });
-});

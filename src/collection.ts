@@ -33,19 +33,21 @@ export default class Collection<T extends Record> {
     get: (target, prop, receiver) => {
       const propAsNumber = Number(prop);
       if (isNaN(propAsNumber)) {
+        /** If it is method or property of collection, it's ok, else throws error  */
         if (
           /** @see https://eslint.org/docs/rules/no-prototype-builtins */
           Object.prototype.hasOwnProperty.call(Collection.prototype, prop) ||
           Object.prototype.hasOwnProperty.call(target, prop)
         ) {
           // Element implicitly has an 'any' type because index expression is not of type 'number'.
-          // But we want to access methods & private properties, not a [NUMBER] value
+          // But we want to access methods & private properties, not a collection[NUMBER] value
           //@ts-ignore
           return target[prop];
+        } else {
+          throw `Property [${String(prop)}] of collection [${
+            target.name
+          }] is inaccessible`;
         }
-        throw `Property [${String(prop)}] of collection [${
-          target.name
-        }] is inaccessible`;
       } else {
         return target.data[propAsNumber];
       }
@@ -169,7 +171,7 @@ export default class Collection<T extends Record> {
     return this.data.includes(searchElement, fromIndex);
   }
   public values(): IterableIterator<T> {
-    return this.values();
+    return this.data.values();
   }
   find<S extends T>(
     predicate: (this: void, value: T, index: number, obj: T[]) => value is S,
