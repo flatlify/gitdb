@@ -20,12 +20,12 @@ interface Author {
 type schema = Record<string, Collection<any>>;
 class GitDB {
   config: Config;
-  data: schema;
+  collections: schema;
   gitRoot: string;
 
   constructor(config: Config) {
     this.config = config;
-    this.data = {};
+    this.collections = {};
     /** ".." because it returns `path/to/file/.git` */
     this.gitRoot = path.resolve(findGitRoot(config.dbDir), '..');
   }
@@ -51,30 +51,33 @@ class GitDB {
           const documentPath = `${collectionPath}/${documentName}`;
           const document = await fs.readFile(documentPath, 'utf8');
           const documentData = JSON.parse(document);
-          this.data[collectionName].push(documentData);
+          this.collections[collectionName].insert(documentData, false);
         });
         await Promise.all(documentPromises);
       }
     );
 
     await Promise.all(collectionPromises);
-    return this.data;
+    return this.collections;
   }
 
-  public async create(collectionName: string): Promise<string> {
-    await fs.mkdir(this.config.dbDir);
-    // this.data[collectionName] = new Collection(collectionName, this);
+  public async createCollection(collectionName: string): Promise<string> {
+    await fse.ensureDir(this.config.dbDir);
+    this.collections[collectionName] = Collection.createCollection(
+      collectionName,
+      this
+    );
     return collectionName;
   }
 
   public async list(): Promise<string[]> {
-    const colletionNames = Object.keys(this.data);
+    const colletionNames = Object.keys(this.collections);
     return colletionNames;
   }
 
   public async delete(collectionName: string): Promise<string> {
     await fse.remove(`${this.config.dbDir}/${collectionName}`);
-    delete this.data[collectionName];
+    delete this.collections[collectionName];
     return collectionName;
   }
 
@@ -87,7 +90,11 @@ class GitDB {
     const gitAddPromises = filePaths.map(async (filepath) => {
       const relativeFilePath = path.relative(this.gitRoot, filepath);
       if (!remove) {
-        await isoGit.add({ dir: this.gitRoot, filepath: relativeFilePath, fs });
+        await isoGit.add({
+          dir: this.gitRoot,
+          filepath: relativeFilePath,
+          fs: fsWithCallbacks
+        });
       } else {
         await isoGit.remove({
           dir: this.gitRoot,
@@ -96,6 +103,7 @@ class GitDB {
         });
       }
     });
+
     await Promise.all(gitAddPromises);
     const sha = await isoGit.commit({
       dir: this.gitRoot,
@@ -104,7 +112,7 @@ class GitDB {
         email: author.email
       },
       message,
-      fs
+      fs: fsWithCallbacks
     });
     return filePaths;
   }
@@ -115,3 +123,22 @@ class GitDB {
 }
 
 export default GitDB;
+
+const db = new GitDB({ dbDir: `./db` });
+
+db.createCollection('my-collection').then(async () => {
+  // await db.collections['my-collection'].insert({ id: 5 });
+  await db.readDb();
+  const myCollection = db.collections['my-collection'];
+  // await myCollection.insert({ da: 'net' });
+  // await myCollection.update(
+  //   { id: '0.5442273377574862' },
+  //   { dadaad: 'dadadada' }
+  // );
+  db.commit(['./db/my-collection/0.5442273377574862.json'], 'qq', false, {
+    name: 'name',
+    email: 'email'
+  });
+  // await db.delete('my-collection');
+  // await myCollection.delete({ id: '0.9226278074221699' });
+});

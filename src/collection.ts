@@ -1,8 +1,5 @@
-// import fsWithCallbacks from 'fs';
 import GitDB from './gitdb';
-// const fs = fsWithCallbacks.promises;
 import fse from 'fs-extra';
-
 interface Record {
   id: string;
 }
@@ -12,30 +9,43 @@ interface Filter {
 }
 
 type SetCallback<T> = (record: T) => T;
-
 type UpdateOrCallback<T, K extends T> = T | SetCallback<K>;
 
 /**
  * TODO add immutablejs to prevent array and object mutation
  */
+export default class Collection<T extends Record> {
+  private db: GitDB;
+  private name: string;
+  private data: any[];
+  [n: number]: T;
+  get length() {
+    return this.data.length;
+  }
 
-export default class Collection<T extends Record> extends Array {
-  private db: GitDB = new GitDB({ dbDir: '.' });
-  private name = '';
-  private data: any[] = [];
-  constructor(props: any) {
-    super();
+  private constructor(gitDb: GitDB, name: string) {
+    this.db = gitDb;
+    this.name = name;
+    this.data = [];
   }
 
   private static handler: ProxyHandler<Collection<any>> = {
     get: (target, prop, receiver) => {
-      /** probably not the best solution */
       const propAsNumber = Number(prop);
       if (isNaN(propAsNumber)) {
-        if (Array.prototype.hasOwnProperty(prop)) {
-          return Reflect.get(target.data, prop, target.data);
+        if (
+          /** @see https://eslint.org/docs/rules/no-prototype-builtins */
+          Object.prototype.hasOwnProperty.call(Collection.prototype, prop) ||
+          Object.prototype.hasOwnProperty.call(target, prop)
+        ) {
+          // Element implicitly has an 'any' type because index expression is not of type 'number'.
+          // But we want to access methods & private properties, not a [NUMBER] value
+          //@ts-ignore
+          return target[prop];
         }
-        return Reflect.get(target, prop);
+        throw `Property [${String(prop)}] of collection [${
+          target.name
+        }] is inaccessible`;
       } else {
         return target.data[propAsNumber];
       }
@@ -43,25 +53,18 @@ export default class Collection<T extends Record> extends Array {
   };
 
   public static createCollection(name: string, gitDB: GitDB): Collection<any> {
-    // const collection = new Collection(name, gitDB);
-    /** basic MyClass extends Array sets prototype to Array, not MyClass
-     * @see https://blog.simontest.net/extend-array-with-typescript-965cc1134b3
-     */
-    const collection = Object.create(Collection.prototype);
-    collection.db = gitDB;
-    collection.name = name;
-    collection.data = [];
-
+    const collection = new Collection(gitDB, name);
     const collectionProxy = new Proxy(collection, Collection.handler);
-
     return collectionProxy;
   }
 
-  public async insert(documentData: T): Promise<T> {
-    const newDocument = { ...documentData, id: String(Math.random()) };
-    this.data.push(documentData);
+  public async insert(documentData: T, writeToDisk = true): Promise<T> {
+    const newDocument = { id: String(Math.random()), ...documentData };
+    this.data.push(newDocument);
     const filePath = `${this.db.config.dbDir}/${this.name}/${newDocument.id}.json`;
-    fse.outputJson(filePath, documentData);
+    if (writeToDisk) {
+      fse.outputJson(filePath, newDocument);
+    }
     return newDocument;
   }
 
@@ -75,7 +78,7 @@ export default class Collection<T extends Record> extends Array {
         const documentIndex = this.data.findIndex((e) => (e.id = id));
         this.data.splice(documentIndex, 1);
         this.data = [...this.data, dataOrCallback];
-        const filePath = `${this.db.config.dbDir}/${this.name}/${dataOrCallback.id}.json`;
+        const filePath = `${this.db.config.dbDir}/${this.name}/${id}.json`;
         fse.outputJson(filePath, dataOrCallback);
       }
     }
@@ -94,22 +97,90 @@ export default class Collection<T extends Record> extends Array {
     }
     return false;
   }
+  public concat(...items: (T | ConcatArray<T>)[]): T[] {
+    return this.data.concat(...items);
+  }
+  public join(separator?: string): string {
+    return this.data.join(separator);
+  }
+  public reverse(): T[] {
+    return this.data.reverse();
+  }
+  public slice(start?: number, end?: number): T[] {
+    return this.data.slice(start, end);
+  }
+  public sort(compareFn?: (a: T, b: T) => number): Array<T> {
+    const newArray = [...this.data];
+    return newArray.sort(compareFn);
+  }
+  public indexOf(searchElement: T, fromIndex?: number): number {
+    return this.indexOf(searchElement, fromIndex);
+  }
+  public lastIndexOf(searchElement: T, fromIndex?: number): number {
+    return this.lastIndexOf(searchElement, fromIndex);
+  }
+  public every(
+    callbackfn: (value: T, index: number, array: T[]) => unknown,
+    thisArg?: any
+  ): boolean {
+    return this.data.every(callbackfn, thisArg);
+  }
+  public some(
+    callbackfn: (value: T, index: number, array: T[]) => unknown,
+    thisArg?: any
+  ): boolean {
+    return this.data.some(callbackfn, thisArg);
+  }
+  public map<U>(
+    callbackfn: (value: T, index: number, array: T[]) => U,
+    thisArg?: any
+  ): U[] {
+    return this.data.map(callbackfn), thisArg;
+  }
+  public filter<S extends T>(
+    callbackfn: (value: T, index: number, array: T[]) => value is S,
+    thisArg?: any
+  ): S[] {
+    return this.data.filter(callbackfn, thisArg);
+  }
+  public reduce<U>(
+    callbackfn: (
+      previousValue: U,
+      currentValue: T,
+      currentIndex: number,
+      array: T[]
+    ) => U,
+    initialValue?: U
+  ): U {
+    return this.data.reduce(callbackfn, initialValue);
+  }
+  public reduceRight<U>(
+    callbackfn: (
+      previousValue: U,
+      currentValue: T,
+      currentIndex: number,
+      array: T[]
+    ) => U,
+    initialValue?: U
+  ): U {
+    return this.data.reduceRight(callbackfn, initialValue);
+  }
+  public includes(searchElement: T, fromIndex?: number): boolean {
+    return this.data.includes(searchElement, fromIndex);
+  }
+  public values(): IterableIterator<T> {
+    return this.values();
+  }
+  find<S extends T>(
+    predicate: (this: void, value: T, index: number, obj: T[]) => value is S,
+    thisArg?: any
+  ): S | undefined {
+    return this.data.find(predicate, thisArg);
+  }
+  findIndex(
+    predicate: (value: T, index: number, obj: T[]) => unknown,
+    thisArg?: any
+  ): number {
+    return this.data.findIndex(predicate, thisArg);
+  }
 }
-
-const collection = Collection.createCollection(
-  'name',
-  new GitDB({ dbDir: '.' })
-);
-
-collection.insert((5 as unknown) as any);
-collection.insert((4 as unknown) as any);
-collection.insert(('dadad' as unknown) as any);
-collection.insert(('aadad' as unknown) as any);
-console.log(collection);
-collection.sort();
-console.log(collection);
-// console.log(collection);
-// collection.push(4)
-// console.log(collection);
-
-// console.log('qq', p[0], Object.getPrototypeOf(p), 'qq')
