@@ -1,15 +1,18 @@
 import GitDB from './gitdb';
+import { v4 as uuidv4 } from 'uuid';
 import fse from 'fs-extra';
 interface Record {
   id: string;
 }
 
-interface Filter {
-  id?: string;
-}
+type Filter<T> = (document: T) => boolean;
 
 type SetCallback<T> = (record: T) => T;
 type UpdateOrCallback<T, K extends T> = T | SetCallback<K>;
+export enum WriteToDisk {
+  DO_NOT_WRITE_TO_DISK = 0,
+  WRITE_TO_DISK = 1,
+}
 
 /**
  * TODO add immutablejs to prevent array and object mutation
@@ -18,171 +21,84 @@ export default class Collection<T extends Record> {
   private db: GitDB;
   private name: string;
   private data: any[];
-  [n: number]: T;
-  get length() {
+  get length(): number {
     return this.data.length;
   }
 
-  private constructor(gitDb: GitDB, name: string) {
+  constructor(gitDb: GitDB, name: string) {
     this.db = gitDb;
     this.name = name;
     this.data = [];
   }
 
-  private static handler: ProxyHandler<Collection<any>> = {
-    get: (target, prop, receiver) => {
-      const propAsNumber = Number(prop);
-      if (isNaN(propAsNumber)) {
-        /** If it is method or property of collection, it's ok, else throws error  */
-        if (
-          /** @see https://eslint.org/docs/rules/no-prototype-builtins */
-          Object.prototype.hasOwnProperty.call(Collection.prototype, prop) ||
-          Object.prototype.hasOwnProperty.call(target, prop)
-        ) {
-          // Element implicitly has an 'any' type because index expression is not of type 'number'.
-          // But we want to access methods & private properties, not a collection[NUMBER] value
-          //@ts-ignore
-          return target[prop];
-        } else {
-          throw `Property [${String(prop)}] of collection [${
-            target.name
-          }] is inaccessible`;
-        }
-      } else {
-        return target.data[propAsNumber];
-      }
-    }
-  };
+  public async getData(callback: Filter<T>): T[] {
+    const collection = this.db.config.cache
+      ? this
+      : await this.db.readCollection(this.name, true);
 
-  public static createCollection(name: string, gitDB: GitDB): Collection<any> {
-    const collection = new Collection(gitDB, name);
-    const collectionProxy = new Proxy(collection, Collection.handler);
-    return collectionProxy;
+    if (typeof callback === 'function') {
+      return collection.data.filter(callback);
+    } else {
+      return collection.data;
+    }
   }
 
-  public async insert(documentData: T, writeToDisk = true): Promise<T> {
-    const newDocument = { id: String(Math.random()), ...documentData };
-    this.data.push(newDocument);
+  public async insert(
+    documentData: T,
+    writeToDisk: WriteToDisk = WriteToDisk.WRITE_TO_DISK,
+  ): Promise<T> {
+    const newDocument = { id: uuidv4(), ...documentData };
+    if (this.db.config.cache) {
+      this.data.push(newDocument);
+    }
     const filePath = `${this.db.config.dbDir}/${this.name}/${newDocument.id}.json`;
     if (writeToDisk) {
+      this.db.commit([filePath], false, { email: 'email', name: 'author' });
       fse.outputJson(filePath, newDocument);
     }
     return newDocument;
   }
 
   public async update<K extends T>(
-    filter: Filter,
-    dataOrCallback: UpdateOrCallback<T, K>
-  ): Promise<K> {
-    const { id } = filter;
-    if (typeof dataOrCallback !== 'function') {
-      if (id) {
-        const documentIndex = this.data.findIndex((e) => (e.id = id));
-        this.data.splice(documentIndex, 1);
-        this.data = [...this.data, dataOrCallback];
-        const filePath = `${this.db.config.dbDir}/${this.name}/${id}.json`;
-        fse.outputJson(filePath, dataOrCallback);
+    filter: Filter<K>,
+    dataOrCallback: UpdateOrCallback<T, K>,
+  ): Promise<boolean> {
+    const newDataPromises = this.data.map(async (document) => {
+      if (filter(document)) {
+        if (typeof dataOrCallback === 'function') {
+          return dataOrCallback(document);
+        }
+        if (typeof dataOrCallback !== 'function') {
+          const filePath = `${this.db.config.dbDir}/${this.name}/${dataOrCallback.id}.json`;
+          this.db.commit([filePath], false, { email: 'email', name: 'author' });
+          fse.outputJson(filePath, dataOrCallback);
+          return dataOrCallback;
+        }
+      } else {
+        return document;
       }
+    });
+    const newData = await Promise.all(newDataPromises);
+    if (this.db.config.cache) {
+      this.data = newData;
     }
-    return Promise.resolve({} as K);
+    return true;
   }
 
-  public async delete(filter: Filter): Promise<boolean> {
-    const { id } = filter;
-    if (id) {
-      const documentIndex = this.data.findIndex((e) => (e.id = id));
-      this.data = [...this.data];
-      this.data.splice(documentIndex, 1);
-      const filePath = `${this.db.config.dbDir}/${this.name}/${id}.json`;
-      await fse.remove(filePath);
-      return true;
+  public async delete(filter: Filter<T>): Promise<boolean> {
+    const newData = this.data.filter(async (document) => {
+      if (filter(document)) {
+        const filePath = `${this.db.config.dbDir}/${this.name}/${document.id}.json`;
+        this.db.commit([filePath], true, { email: 'email', name: 'author' });
+        await fse.remove(filePath);
+        return false;
+      } else {
+        return true;
+      }
+    });
+    if (this.db.config.cache) {
+      this.data = newData;
     }
-    return false;
-  }
-  public concat(...items: (T | ConcatArray<T>)[]): T[] {
-    return this.data.concat(...items);
-  }
-  public join(separator?: string): string {
-    return this.data.join(separator);
-  }
-  public reverse(): T[] {
-    return this.data.reverse();
-  }
-  public slice(start?: number, end?: number): T[] {
-    return this.data.slice(start, end);
-  }
-  public sort(compareFn?: (a: T, b: T) => number): Array<T> {
-    const newArray = [...this.data];
-    return newArray.sort(compareFn);
-  }
-  public indexOf(searchElement: T, fromIndex?: number): number {
-    return this.indexOf(searchElement, fromIndex);
-  }
-  public lastIndexOf(searchElement: T, fromIndex?: number): number {
-    return this.lastIndexOf(searchElement, fromIndex);
-  }
-  public every(
-    callbackfn: (value: T, index: number, array: T[]) => unknown,
-    thisArg?: any
-  ): boolean {
-    return this.data.every(callbackfn, thisArg);
-  }
-  public some(
-    callbackfn: (value: T, index: number, array: T[]) => unknown,
-    thisArg?: any
-  ): boolean {
-    return this.data.some(callbackfn, thisArg);
-  }
-  public map<U>(
-    callbackfn: (value: T, index: number, array: T[]) => U,
-    thisArg?: any
-  ): U[] {
-    return this.data.map(callbackfn), thisArg;
-  }
-  public filter<S extends T>(
-    callbackfn: (value: T, index: number, array: T[]) => value is S,
-    thisArg?: any
-  ): S[] {
-    return this.data.filter(callbackfn, thisArg);
-  }
-  public reduce<U>(
-    callbackfn: (
-      previousValue: U,
-      currentValue: T,
-      currentIndex: number,
-      array: T[]
-    ) => U,
-    initialValue?: U
-  ): U {
-    return this.data.reduce(callbackfn, initialValue);
-  }
-  public reduceRight<U>(
-    callbackfn: (
-      previousValue: U,
-      currentValue: T,
-      currentIndex: number,
-      array: T[]
-    ) => U,
-    initialValue?: U
-  ): U {
-    return this.data.reduceRight(callbackfn, initialValue);
-  }
-  public includes(searchElement: T, fromIndex?: number): boolean {
-    return this.data.includes(searchElement, fromIndex);
-  }
-  public values(): IterableIterator<T> {
-    return this.data.values();
-  }
-  find<S extends T>(
-    predicate: (this: void, value: T, index: number, obj: T[]) => value is S,
-    thisArg?: any
-  ): S | undefined {
-    return this.data.find(predicate, thisArg);
-  }
-  findIndex(
-    predicate: (value: T, index: number, obj: T[]) => unknown,
-    thisArg?: any
-  ): number {
-    return this.data.findIndex(predicate, thisArg);
+    return true;
   }
 }

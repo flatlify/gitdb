@@ -1,15 +1,15 @@
 import fsWithCallbacks from 'fs';
 import fse from 'fs-extra';
 import path from 'path';
-import Collection from './collection';
+import Collection, { WriteToDisk } from './collection';
 import isoGit from 'isomorphic-git';
 import findGitRoot from 'find-git-root';
+const { DO_NOT_WRITE_TO_DISK } = WriteToDisk;
 
 const fs = fsWithCallbacks.promises;
-
 interface Config {
   autoCommit?: boolean;
-  cache?: string | null;
+  cache: boolean;
   dbDir: string;
 }
 interface Author {
@@ -34,84 +34,128 @@ class GitDB {
    * Instantiates GitDB with a given config
    * @param config
    */
-  static init(config: Config): GitDB {
-    return new GitDB(config);
+  static async init(config: Config): Promise<GitDB> {
+    const gitDb = new GitDB(config);
+
+    if (gitDb.config.cache) {
+      const collectionDirectoryNames = await fs.readdir(config.dbDir);
+      const collectionPromises = collectionDirectoryNames.map(
+        async (collectionName) => {
+          await gitDb.readCollection(collectionName, true);
+        },
+      );
+      await Promise.all(collectionPromises);
+    }
+    return gitDb;
   }
 
-  public async readDb(): Promise<schema> {
-    const collectionDirectoryNames = await fs.readdir(this.config.dbDir);
+  async readCollection(
+    collectionName: string,
+    cache: boolean,
+  ): Promise<Collection<any>> {
+    const collectionPath = `${this.config.dbDir}/${collectionName}`;
+    const documentNames = await fs.readdir(collectionPath);
 
-    const collectionPromises = collectionDirectoryNames.map(
-      async (collectionName) => {
-        const collectionPath = `${this.config.dbDir}/${collectionName}`;
+    const collection = cache
+      ? this.collections[collectionName]
+      : new Collection(this, collectionName);
 
-        const documentNames = await fs.readdir(collectionPath);
-        const documentPromises = documentNames.map(async (documentName) => {
-          const documentPath = `${collectionPath}/${documentName}`;
-          const document = await fs.readFile(documentPath, 'utf8');
-          const documentData = JSON.parse(document);
-          this.collections[collectionName].insert(documentData, false);
-        });
-        await Promise.all(documentPromises);
-      }
+    const documentPromises = documentNames.map(
+      this.readFiles(collectionPath, collection),
     );
 
-    await Promise.all(collectionPromises);
-    return this.collections;
+    await Promise.all(documentPromises);
+    return collection;
+  }
+
+  private readFiles(
+    collectionPath: string,
+    collection: Collection<any>,
+  ): (value: string, index: number, array: string[]) => Promise<void> {
+    return async (documentName): Promise<void> => {
+      const documentPath = `${collectionPath}/${documentName}`;
+      const document = await fs.readFile(documentPath, 'utf8');
+      const documentData = JSON.parse(document);
+
+      collection.insert(documentData, DO_NOT_WRITE_TO_DISK);
+    };
+  }
+
+  public async getCollection(collectionName: string): Promise<Collection<any>> {
+    if (this.config.cache) {
+      return this.collections[collectionName];
+    } else {
+      const collection = this.readCollection(collectionName, this.config.cache);
+      return collection;
+    }
   }
 
   public async createCollection(collectionName: string): Promise<string> {
     await fse.ensureDir(this.config.dbDir);
-    this.collections[collectionName] = Collection.createCollection(
-      collectionName,
-      this
-    );
+    if (this.config.cache) {
+      this.collections[collectionName] = new Collection(this, collectionName);
+    }
     return collectionName;
   }
 
-  public async list(): Promise<string[]> {
-    const colletionNames = Object.keys(this.collections);
-    return colletionNames;
+  public async getCollectionsList(): Promise<string[]> {
+    if (this.config.cache) {
+      return Object.keys(this.collections);
+    } else {
+      return await fs.readdir(this.config.dbDir);
+    }
   }
 
   public async delete(collectionName: string): Promise<string> {
     await fse.remove(`${this.config.dbDir}/${collectionName}`);
-    delete this.collections[collectionName];
+    if (this.config.cache) {
+      delete this.collections[collectionName];
+    }
     return collectionName;
   }
 
   public async commit(
     filePaths: string[],
-    message: string | undefined = '',
     remove: boolean,
-    author: Author
+    author: Author,
+    userMessage: string | undefined = '',
   ): Promise<string[]> {
+    const relativeFilePaths: string[] = [];
     const gitAddPromises = filePaths.map(async (filepath) => {
       const relativeFilePath = path.relative(this.gitRoot, filepath);
-      if (!remove) {
-        await isoGit.add({
-          dir: this.gitRoot,
-          filepath: relativeFilePath,
-          fs: fsWithCallbacks
-        });
-      } else {
+      relativeFilePaths.push(relativeFilePath);
+      if (remove) {
         await isoGit.remove({
           dir: this.gitRoot,
           filepath: relativeFilePath,
-          fs
+          fs,
+        });
+      } else {
+        await isoGit.add({
+          dir: this.gitRoot,
+          filepath: relativeFilePath,
+          fs: fsWithCallbacks,
         });
       }
     });
+    let message = userMessage;
+    if (!message) {
+      if (remove) {
+        message = `Deleted files: ${relativeFilePaths}`;
+      } else {
+        message = `Added files: ${relativeFilePaths}`;
+      }
+    }
 
     await Promise.all(gitAddPromises);
     const sha = await isoGit.commit({
       dir: this.gitRoot,
       author: {
         name: author.name,
-        email: author.email
+        email: author.email,
       },
       message,
-      fs: fsWithCallbacks
+      fs: fsWithCallbacks,
     });
     return filePaths;
   }
