@@ -1,104 +1,103 @@
 import GitDB from './gitdb';
 import { v4 as uuidv4 } from 'uuid';
-import fse from 'fs-extra';
-interface Record {
+import { FileStrategy } from './FileStrategy';
+import { MemoryStrategy } from './MemoryStrategy';
+export interface DBRecord {
   id: string;
 }
 
-type Filter<T> = (document: T) => boolean;
-
-type SetCallback<T> = (record: T) => T;
-type UpdateOrCallback<T, K extends T> = T | SetCallback<K>;
-export enum WriteToDisk {
-  DO_NOT_WRITE_TO_DISK = 0,
-  WRITE_TO_DISK = 1,
+export type Filter<T> = (document: T) => boolean;
+export type SetCallback<T> = (record: T) => T;
+enum gitStagingAreaStatus {
+  add,
+  remove,
 }
-
 /**
  * TODO add immutablejs to prevent array and object mutation
  */
-export default class Collection<T extends Record> {
+export default class Collection<T extends DBRecord> {
   private db: GitDB;
-  private name: string;
-  private data: any[];
-  get length(): number {
-    return this.data.length;
-  }
+  fileStrategy: FileStrategy<T>;
+  memoryStrategy: MemoryStrategy<T>;
 
-  constructor(gitDb: GitDB, name: string) {
+  constructor(
+    gitDb: GitDB,
+    fileStrategy: FileStrategy<T>,
+    memoryStrategy: MemoryStrategy<T>,
+  ) {
     this.db = gitDb;
-    this.name = name;
-    this.data = [];
+    this.fileStrategy = fileStrategy;
+    this.memoryStrategy = memoryStrategy;
   }
 
-  public async getData(callback: Filter<T>): T[] {
-    const collection = this.db.config.cache
-      ? this
-      : await this.db.readCollection(this.name, true);
-
-    if (typeof callback === 'function') {
-      return collection.data.filter(callback);
-    } else {
-      return collection.data;
-    }
+  public async getAll(): Promise<T[]> {
+    const documents = this.db.config.cache
+      ? this.memoryStrategy.getAll()
+      : this.fileStrategy.getAll();
+    return documents;
   }
 
-  public async insert(
-    documentData: T,
-    writeToDisk: WriteToDisk = WriteToDisk.WRITE_TO_DISK,
-  ): Promise<T> {
+  public async getData(callback: Filter<T>): Promise<T[]> {
+    const filteredDocuments = this.db.config.cache
+      ? this.memoryStrategy.getData(callback)
+      : this.fileStrategy.getData(callback);
+
+    return filteredDocuments;
+  }
+
+  public async insert(documentData: T): Promise<T> {
     const newDocument = { id: uuidv4(), ...documentData };
+    const filePath = await this.fileStrategy.insert(newDocument);
+
     if (this.db.config.cache) {
-      this.data.push(newDocument);
+      this.memoryStrategy.insert(newDocument);
     }
-    const filePath = `${this.db.config.dbDir}/${this.name}/${newDocument.id}.json`;
-    if (writeToDisk) {
-      this.db.commit([filePath], false, { email: 'email', name: 'author' });
-      fse.outputJson(filePath, newDocument);
-    }
+    await this.checkForAutoCommit([filePath], gitStagingAreaStatus.add);
+
     return newDocument;
   }
 
   public async update<K extends T>(
     filter: Filter<K>,
-    dataOrCallback: UpdateOrCallback<T, K>,
+    modifier: SetCallback<T>,
   ): Promise<boolean> {
-    const newDataPromises = this.data.map(async (document) => {
-      if (filter(document)) {
-        if (typeof dataOrCallback === 'function') {
-          return dataOrCallback(document);
-        }
-        if (typeof dataOrCallback !== 'function') {
-          const filePath = `${this.db.config.dbDir}/${this.name}/${dataOrCallback.id}.json`;
-          this.db.commit([filePath], false, { email: 'email', name: 'author' });
-          fse.outputJson(filePath, dataOrCallback);
-          return dataOrCallback;
-        }
-      } else {
-        return document;
-      }
-    });
-    const newData = await Promise.all(newDataPromises);
+    const { filePaths, updated } = await this.fileStrategy.update(
+      filter,
+      modifier,
+    );
+
     if (this.db.config.cache) {
-      this.data = newData;
+      this.memoryStrategy.update(filter, modifier);
     }
-    return true;
+    await this.checkForAutoCommit(filePaths, gitStagingAreaStatus.add);
+
+    return updated;
   }
 
   public async delete(filter: Filter<T>): Promise<boolean> {
-    const newData = this.data.filter(async (document) => {
-      if (filter(document)) {
-        const filePath = `${this.db.config.dbDir}/${this.name}/${document.id}.json`;
-        this.db.commit([filePath], true, { email: 'email', name: 'author' });
-        await fse.remove(filePath);
-        return false;
-      } else {
-        return true;
-      }
-    });
+    const { filePaths, deleted } = await this.fileStrategy.delete(filter);
+
     if (this.db.config.cache) {
-      this.data = newData;
+      this.memoryStrategy.delete(filter);
     }
-    return true;
+    await this.checkForAutoCommit(filePaths, gitStagingAreaStatus.remove);
+
+    return deleted;
+  }
+
+  private async checkForAutoCommit(
+    filePaths: string[],
+    addFile: gitStagingAreaStatus,
+  ): Promise<boolean> {
+    if (this.db.config.autoCommit) {
+      if (addFile) {
+        await this.db.add(filePaths);
+      } else {
+        await this.db.remove(filePaths);
+      }
+      await this.db.commit();
+      return true;
+    }
+    return false;
   }
 }
