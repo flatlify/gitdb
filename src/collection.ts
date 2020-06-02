@@ -18,12 +18,12 @@ enum gitStagingAreaStatus {
 export default class Collection<T extends DBRecord> {
   private db: GitDB;
   fileStrategy: FileStrategy<T>;
-  memoryStrategy: MemoryStrategy<T>;
+  memoryStrategy?: MemoryStrategy<T>;
 
   constructor(
     gitDb: GitDB,
     fileStrategy: FileStrategy<T>,
-    memoryStrategy: MemoryStrategy<T>,
+    memoryStrategy?: MemoryStrategy<T>,
   ) {
     this.db = gitDb;
     this.fileStrategy = fileStrategy;
@@ -31,14 +31,14 @@ export default class Collection<T extends DBRecord> {
   }
 
   public async getAll(): Promise<T[]> {
-    const documents = this.db.config.cache
+    const documents = this.memoryStrategy
       ? this.memoryStrategy.getAll()
       : this.fileStrategy.getAll();
     return documents;
   }
 
   public async getData(callback: Filter<T>): Promise<T[]> {
-    const filteredDocuments = this.db.config.cache
+    const filteredDocuments = this.memoryStrategy
       ? this.memoryStrategy.getData(callback)
       : this.fileStrategy.getData(callback);
 
@@ -49,7 +49,7 @@ export default class Collection<T extends DBRecord> {
     const newDocument = { id: uuidv4(), ...documentData };
     const filePath = await this.fileStrategy.insert(newDocument);
 
-    if (this.db.config.cache) {
+    if (this.memoryStrategy) {
       this.memoryStrategy.insert(newDocument);
     }
     await this.checkForAutoCommit([filePath], gitStagingAreaStatus.add);
@@ -60,29 +60,25 @@ export default class Collection<T extends DBRecord> {
   public async update<K extends T>(
     filter: Filter<K>,
     modifier: SetCallback<T>,
-  ): Promise<boolean> {
-    const { filePaths, updated } = await this.fileStrategy.update(
-      filter,
-      modifier,
-    );
+  ): Promise<string[]> {
+    const filePaths = await this.fileStrategy.update(filter, modifier);
 
-    if (this.db.config.cache) {
+    if (this.memoryStrategy) {
       this.memoryStrategy.update(filter, modifier);
     }
     await this.checkForAutoCommit(filePaths, gitStagingAreaStatus.add);
-
-    return updated;
+    return filePaths;
   }
 
-  public async delete(filter: Filter<T>): Promise<boolean> {
-    const { filePaths, deleted } = await this.fileStrategy.delete(filter);
+  public async delete(filter: Filter<T>): Promise<string[]> {
+    const filePaths = await this.fileStrategy.delete(filter);
 
-    if (this.db.config.cache) {
+    if (this.memoryStrategy) {
       this.memoryStrategy.delete(filter);
     }
     await this.checkForAutoCommit(filePaths, gitStagingAreaStatus.remove);
 
-    return deleted;
+    return filePaths;
   }
 
   private async checkForAutoCommit(

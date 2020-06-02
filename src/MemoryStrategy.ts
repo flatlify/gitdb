@@ -23,16 +23,13 @@ export class MemoryStrategy<T extends DBRecord> {
   public async update<K extends T>(
     filter: Filter<K>,
     modifier: SetCallback<T>,
-  ): Promise<boolean> {
-    let updated = false;
+  ): Promise<void> {
     const newDocuments = this.data.filter(filter).map((document) => {
-      updated = true;
       const documentId = document.id;
       const newDocument = { ...modifier(document), id: documentId };
       return newDocument;
     });
     this.data = newDocuments;
-    return updated;
   }
 
   public async delete(filter: Filter<T>): Promise<boolean> {
