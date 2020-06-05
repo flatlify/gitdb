@@ -1,30 +1,28 @@
-import GitDB from './gitdb';
 import fse from 'fs-extra';
-import { Filter, SetCallback, DBRecord } from './collection';
+import { DBRecord } from './collection';
 import path from 'path';
+import { readDocuments } from './utils/file';
+import { Filter, SetCallback } from './collectionStrategy';
 
 export class FileStrategy<T extends DBRecord> {
-  private db: GitDB;
-  private name: string;
+  private collectionPath: string;
 
-  constructor(gitDb: GitDB, name: string) {
-    this.db = gitDb;
-    this.name = name;
+  constructor(collectionPath: string) {
+    this.collectionPath = collectionPath;
   }
 
   public getAll(): Promise<T[]> {
-    return this.db.readDocuments(this.name);
+    return readDocuments(this.collectionPath);
   }
 
   public async getData(callback: Filter<T>): Promise<T[]> {
-    const documents = await this.db.readDocuments(this.name);
+    const documents = await readDocuments(this.collectionPath);
     return documents.filter(callback);
   }
 
   public async insert(documentData: T): Promise<string> {
     const filePath = path.resolve(
-      this.db.config.dbDir,
-      this.name,
+      this.collectionPath,
       `${documentData.id}.json`,
     );
     fse.outputJson(filePath, documentData);
@@ -38,17 +36,13 @@ export class FileStrategy<T extends DBRecord> {
   ): Promise<string[]> {
     const filePaths: string[] = [];
 
-    const documents = await this.db.readDocuments(this.name);
+    const documents = await readDocuments(this.collectionPath);
 
     const newDataPromises = documents.filter(filter).map(async (document) => {
       const documentId = document.id;
       const newDocument = { ...modifier(document), id: documentId };
 
-      const filePath = path.resolve(
-        this.db.config.dbDir,
-        this.name,
-        `${documentId}.json`,
-      );
+      const filePath = path.resolve(this.collectionPath, `${documentId}.json`);
 
       await fse.outputJson(filePath, newDocument);
       return newDocument;
@@ -62,14 +56,10 @@ export class FileStrategy<T extends DBRecord> {
     const removedPromises: any[] = [];
     const filePaths: string[] = [];
 
-    const documents = await this.db.readDocuments(this.name);
+    const documents = await readDocuments(this.collectionPath);
 
     documents.filter(filter).map((document) => {
-      const filePath = path.resolve(
-        this.db.config.dbDir,
-        this.name,
-        `${document.id}.json`,
-      );
+      const filePath = path.resolve(this.collectionPath, `${document.id}.json`);
 
       filePaths.push(filePath);
       const removedPromise = fse.remove(filePath);
