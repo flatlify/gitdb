@@ -1,9 +1,10 @@
-import { Filter, SetCallback, DBRecord } from './collection';
+import { DBRecord } from './collection';
+import { Filter, SetCallback } from './collectionStrategy';
 
 export class MemoryStrategy<T extends DBRecord> {
   private data: any[];
 
-  constructor(data: any[]) {
+  constructor(data: T[]) {
     this.data = data || [];
   }
 
@@ -33,9 +34,10 @@ export class MemoryStrategy<T extends DBRecord> {
   }
 
   public async delete(filter: Filter<T>): Promise<boolean> {
-    const newData = this.data.filter((document) =>
-      // we want to delete filtered elements, not save them
-      filter(document) ? false : true,
+    const newData = this.data.filter(
+      (document) =>
+        // we want to delete filtered elements, not save them
+        !filter(document),
     );
     this.data = newData;
     return true;

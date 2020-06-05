@@ -48,29 +48,6 @@ class GitDB {
     return gitDb;
   }
 
-  public async readDocuments(collectionName: string): Promise<any[]> {
-    const collectionPath = `${this.config.dbDir}/${collectionName}`;
-    const documentNames = await fs.readdir(collectionPath);
-
-    const documentPromises = documentNames.map(this.readFile(collectionPath));
-    const documents = await Promise.all(documentPromises);
-
-    // const collection = new Collection(this, collectionName, documents);
-
-    // await Promise.all(documentPromises);
-    return documents;
-  }
-
-  private readFile(
-    collectionPath: string,
-  ): (value: string, index: number, array: string[]) => Promise<any> {
-    return async (documentName): Promise<any> => {
-      const documentPath = `${collectionPath}/${documentName}`;
-      const document = await fs.readFile(documentPath, 'utf8');
-      const documentData = JSON.parse(document);
-      return documentData;
-    };
-  }
 
   public async get(collectionName: string): Promise<Collection<any>> {
     return this.collections[collectionName];

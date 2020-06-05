@@ -2,12 +2,11 @@ import GitDB from './gitdb';
 import { v4 as uuidv4 } from 'uuid';
 import { FileStrategy } from './FileStrategy';
 import { MemoryStrategy } from './MemoryStrategy';
+import { Filter, SetCallback } from './collectionStrategy';
 export interface DBRecord {
   id: string;
 }
 
-export type Filter<T> = (document: T) => boolean;
-export type SetCallback<T> = (record: T) => T;
 enum gitStagingAreaStatus {
   add,
   remove,
