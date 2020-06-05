@@ -1,7 +1,6 @@
-import fse from 'fs-extra';
 import { DBRecord } from './collection';
 import path from 'path';
-import { readDocuments } from './utils/file';
+import { remove, readDocuments, outputJson } from './utils/file';
 import { Filter, SetCallback } from './collectionStrategy';
 
 export class FileStrategy<T extends DBRecord> {
@@ -25,7 +24,7 @@ export class FileStrategy<T extends DBRecord> {
       this.collectionPath,
       `${documentData.id}.json`,
     );
-    fse.outputJson(filePath, documentData);
+    outputJson(filePath, documentData);
 
     return filePath;
   }
@@ -37,14 +36,13 @@ export class FileStrategy<T extends DBRecord> {
     const filePaths: string[] = [];
 
     const documents = await readDocuments(this.collectionPath);
-
     const newDataPromises = documents.filter(filter).map(async (document) => {
       const documentId = document.id;
       const newDocument = { ...modifier(document), id: documentId };
 
       const filePath = path.resolve(this.collectionPath, `${documentId}.json`);
 
-      await fse.outputJson(filePath, newDocument);
+      await outputJson(filePath, newDocument);
       return newDocument;
     });
 
@@ -62,7 +60,7 @@ export class FileStrategy<T extends DBRecord> {
       const filePath = path.resolve(this.collectionPath, `${document.id}.json`);
 
       filePaths.push(filePath);
-      const removedPromise = fse.remove(filePath);
+      const removedPromise = remove(filePath);
       removedPromises.push(removedPromise);
     });
     await Promise.all(removedPromises);

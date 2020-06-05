@@ -125,6 +125,25 @@ describe('update', () => {
     updatedData.forEach((e) => expect(e.integer === NEW_VALUE));
   });
 
+  test('Do not modify id', async () => {
+    const OLD_ID = '2';
+    const memoryStrategy = new MemoryStrategy([
+      { id: '0', integer: 1 },
+      { id: '1', integer: 2 },
+      { id: '2', integer: 3 },
+    ]);
+
+    await memoryStrategy.update(
+      (e) => e.integer === 3,
+      (e) => ({ ...e, id: '24' }),
+    );
+
+    const updatedData = (
+      await memoryStrategy.getData((e) => e.integer === 3)
+    )[0];
+    expect(updatedData.id).toBe(OLD_ID);
+  });
+
   test('Do not modify wrong data', async () => {
     const OLD_VALUE = 1;
     const NEW_VALUE = 25;
