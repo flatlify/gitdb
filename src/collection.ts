@@ -1,33 +1,99 @@
-interface Record {
-  id: string
+import GitDB from './gitdb';
+import { v4 as uuidv4 } from 'uuid';
+import { FileStrategy } from './FileStrategy';
+import { MemoryStrategy } from './MemoryStrategy';
+export interface DBRecord {
+  id: string;
 }
 
-interface Filter {
-
+export type Filter<T> = (document: T) => boolean;
+export type SetCallback<T> = (record: T) => T;
+enum gitStagingAreaStatus {
+  add,
+  remove,
 }
-
-type SetCallback<T> = (record: T) => T;
-
-type UpdateOrCallback<T, K extends T> = T | SetCallback<K>;
-
 /**
  * TODO add immutablejs to prevent array and object mutation
  */
-export default class Collection extends Array {
-  public insert<T>(data: T): Promise<T & Record> {
-    // TODO insert logic
-    return Promise.resolve({...data, id: String(Math.random())});
+export default class Collection<T extends DBRecord> {
+  private db: GitDB;
+  fileStrategy: FileStrategy<T>;
+  memoryStrategy?: MemoryStrategy<T>;
+
+  constructor(
+    gitDb: GitDB,
+    fileStrategy: FileStrategy<T>,
+    memoryStrategy?: MemoryStrategy<T>,
+  ) {
+    this.db = gitDb;
+    this.fileStrategy = fileStrategy;
+    this.memoryStrategy = memoryStrategy;
   }
 
-  public update<T, K extends T>(filter: Filter, dataOrCallback: UpdateOrCallback<T, K>): Promise<K> {
-    // TODO insert logic
-    return Promise.resolve({} as K);
+  public async getAll(): Promise<T[]> {
+    const documents = this.memoryStrategy
+      ? this.memoryStrategy.getAll()
+      : this.fileStrategy.getAll();
+    return documents;
   }
 
-  public delete<T>(filter: Filter): Promise<Record[]> {
-    // TODO insert logic
-    return Promise.resolve([
-      { id: String(Math.random()) }
-    ]);
+  public async getData(callback: Filter<T>): Promise<T[]> {
+    const filteredDocuments = this.memoryStrategy
+      ? this.memoryStrategy.getData(callback)
+      : this.fileStrategy.getData(callback);
+
+    return filteredDocuments;
+  }
+
+  public async insert(documentData: T): Promise<T> {
+    const newDocument = { id: uuidv4(), ...documentData };
+    const filePath = await this.fileStrategy.insert(newDocument);
+
+    if (this.memoryStrategy) {
+      this.memoryStrategy.insert(newDocument);
+    }
+    await this.checkForAutoCommit([filePath], gitStagingAreaStatus.add);
+
+    return newDocument;
+  }
+
+  public async update<K extends T>(
+    filter: Filter<K>,
+    modifier: SetCallback<T>,
+  ): Promise<string[]> {
+    const filePaths = await this.fileStrategy.update(filter, modifier);
+
+    if (this.memoryStrategy) {
+      this.memoryStrategy.update(filter, modifier);
+    }
+    await this.checkForAutoCommit(filePaths, gitStagingAreaStatus.add);
+    return filePaths;
+  }
+
+  public async delete(filter: Filter<T>): Promise<string[]> {
+    const filePaths = await this.fileStrategy.delete(filter);
+
+    if (this.memoryStrategy) {
+      this.memoryStrategy.delete(filter);
+    }
+    await this.checkForAutoCommit(filePaths, gitStagingAreaStatus.remove);
+
+    return filePaths;
+  }
+
+  private async checkForAutoCommit(
+    filePaths: string[],
+    addFile: gitStagingAreaStatus,
+  ): Promise<boolean> {
+    if (this.db.config.autoCommit) {
+      if (addFile) {
+        await this.db.add(filePaths);
+      } else {
+        await this.db.remove(filePaths);
+      }
+      await this.db.commit();
+      return true;
+    }
+    return false;
   }
 }

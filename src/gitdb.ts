@@ -1,39 +1,145 @@
+import fsWithCallbacks from 'fs';
+import fse from 'fs-extra';
+import path from 'path';
+import Collection from './collection';
+import isoGit from 'isomorphic-git';
+import findGitRoot from 'find-git-root';
+import { FileStrategy } from './FileStrategy';
+import { MemoryStrategy } from './MemoryStrategy';
 
+const fs = fsWithCallbacks.promises;
 interface Config {
-  autoCommit: boolean
-  cache: string | null
+  autoCommit?: boolean;
+  cache: boolean;
+  dbDir: string;
+}
+interface Author {
+  name: string;
+  email: string;
 }
 
+type schema = Record<string, Collection<any>>;
 class GitDB {
-
-  private config: Config
+  config: Config;
+  collections: schema;
+  gitRoot: string;
 
   constructor(config: Config) {
     this.config = config;
+    this.collections = {};
+    /** ".." because it returns `path/to/file/.git` */
+    this.gitRoot = path.resolve(findGitRoot(config.dbDir), '..');
   }
 
   /**
    * Instantiates GitDB with a given config
    * @param config
    */
-  static init(config: Config): GitDB {
-    return new GitDB(config);
+  static async init(config: Config): Promise<GitDB> {
+    const gitDb = new GitDB(config);
+
+    const collectionDirectoryNames = await fs.readdir(config.dbDir);
+    const collectionPromises = collectionDirectoryNames.map(
+      async (collectionName) => {
+        gitDb.createCollection(collectionName);
+      },
+    );
+    await Promise.all(collectionPromises);
+    return gitDb;
   }
 
-  public async create(collectionName: string): Promise<string> {
-    return new Promise<string>(resolve => resolve('todo: replace logic to create collection and return its name'))
+  public async readDocuments(collectionName: string): Promise<any[]> {
+    const collectionPath = `${this.config.dbDir}/${collectionName}`;
+    const documentNames = await fs.readdir(collectionPath);
+
+    const documentPromises = documentNames.map(this.readFile(collectionPath));
+    const documents = await Promise.all(documentPromises);
+
+    // const collection = new Collection(this, collectionName, documents);
+
+    // await Promise.all(documentPromises);
+    return documents;
   }
 
-  public async list(collectionName: string): Promise<string[]> {
-    return new Promise<string[]>(resolve => resolve(['todo: replace logic to return list of collection names']))
+  private readFile(
+    collectionPath: string,
+  ): (value: string, index: number, array: string[]) => Promise<any> {
+    return async (documentName): Promise<any> => {
+      const documentPath = `${collectionPath}/${documentName}`;
+      const document = await fs.readFile(documentPath, 'utf8');
+      const documentData = JSON.parse(document);
+      return documentData;
+    };
+  }
+
+  public async get(collectionName: string): Promise<Collection<any>> {
+    return this.collections[collectionName];
+  }
+
+  public async createCollection(collectionName: string): Promise<string> {
+    await fse.ensureDir(this.config.dbDir);
+    const fileStrategy = new FileStrategy(this, collectionName);
+    const data = await fileStrategy.getAll();
+    const memoryStrategy = new MemoryStrategy(data);
+
+    this.collections[collectionName] = new Collection(
+      this,
+      fileStrategy,
+      memoryStrategy,
+    );
+
+    return collectionName;
+  }
+
+  public async list(): Promise<string[]> {
+    return Object.keys(this.collections);
   }
 
   public async delete(collectionName: string): Promise<string> {
-    return new Promise<string>(resolve => resolve('todo: replace logic to delete collection and return its name'))
+    await this.collections[collectionName].delete(() => true);
+    await fse.remove(`${this.config.dbDir}/${collectionName}`);
+
+    delete this.collections[collectionName];
+    return collectionName;
   }
 
-  public async commit(files: string[], message: string | undefined): Promise<string[]> {
-    return new Promise<string[]>(resolve => resolve(['todo: replace logic to return list of commited files']))
+  public async add(filePaths: string[]): Promise<void> {
+    const gitAddPromises = filePaths.map(async (filepath) => {
+      const relativeFilePath = path.relative(this.gitRoot, filepath);
+      await isoGit.add({
+        dir: this.gitRoot,
+        filepath: relativeFilePath,
+        fs,
+      });
+    });
+    await Promise.all(gitAddPromises);
+  }
+
+  public async remove(filePaths: string[]): Promise<void> {
+    const gitRmPromises = filePaths.map(async (filepath) => {
+      const relativeFilePath = path.relative(this.gitRoot, filepath);
+      await isoGit.remove({
+        dir: this.gitRoot,
+        filepath: relativeFilePath,
+        fs,
+      });
+    });
+    await Promise.all(gitRmPromises);
+  }
+
+  public async commit(userMessage: string | undefined = ''): Promise<string> {
+    const relativeFilePaths: string[] = [];
+
+    let message = userMessage;
+    if (!message) {
+      message = `Commit files: ${relativeFilePaths}`;
+    }
+    const sha = await isoGit.commit({
+      dir: this.gitRoot,
+      message,
+      fs: fsWithCallbacks,
+    });
+    return message;
   }
 
   public async reset(files: string[] | undefined): Promise<void> {
