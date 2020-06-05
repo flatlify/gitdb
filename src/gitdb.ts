@@ -48,14 +48,15 @@ class GitDB {
     return gitDb;
   }
 
-
   public async get(collectionName: string): Promise<Collection<any>> {
     return this.collections[collectionName];
   }
 
   public async createCollection(collectionName: string): Promise<string> {
     await fse.ensureDir(this.config.dbDir);
-    const fileStrategy = new FileStrategy(this, collectionName);
+    const fileStrategy = new FileStrategy(
+      path.resolve(this.config.dbDir, collectionName),
+    );
     const data = await fileStrategy.getAll();
     const memoryStrategy = new MemoryStrategy(data);
 
