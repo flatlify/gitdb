@@ -1,4 +1,3 @@
-import { MemoryStrategy } from '../src/MemoryStrategy';
 import { FileStrategy } from '../src/FileStrategy';
 import * as fileDependency from '../src/utils/file';
 
@@ -180,17 +179,17 @@ describe('delete', () => {
       return [{ id: '4' }];
     });
 
-    const mockOutputJson = jest.spyOn(fileDependency, 'remove');
+    const mockRemove = jest.spyOn(fileDependency, 'remove');
     // eslint-disable-next-line @typescript-eslint/no-empty-function
-    mockOutputJson.mockImplementation(async () => {});
+    mockRemove.mockImplementation(async () => {});
 
     const fileStrategy = new FileStrategy(pathToFile);
     await fileStrategy.delete((e) => e.id === '4');
 
-    expect(fileDependency.outputJson).toBeCalledTimes(1);
-    expect(fileDependency.outputJson).toBeCalledWith(`${pathToFile}/4.json`);
+    expect(fileDependency.remove).toBeCalledTimes(1);
+    expect(fileDependency.remove).toBeCalledWith(`${pathToFile}/4.json`);
 
     mockReadDocuments.mockRestore();
-    mockOutputJson.mockRestore();
+    mockRemove.mockRestore();
   });
 });
