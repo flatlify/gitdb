@@ -1,11 +1,11 @@
 import fsWithCallbacks from 'fs';
 import fse from 'fs-extra';
 import path from 'path';
-import Collection from './collection';
+import Collection from './Collection';
 import isoGit from 'isomorphic-git';
 import findGitRoot from 'find-git-root';
-import { FileStrategy } from './FileStrategy';
-import { MemoryStrategy } from './MemoryStrategy';
+import FileStrategy from './FileStrategy';
+import MemoryStrategy from './MemoryStrategy';
 
 const fs = fsWithCallbacks.promises;
 interface Config {
@@ -24,7 +24,7 @@ class GitDB {
   collections: schema;
   gitRoot: string;
 
-  constructor(config: Config) {
+  private constructor(config: Config) {
     this.config = config;
     this.collections = {};
     /** ".." because it returns `path/to/file/.git` */
@@ -37,7 +37,6 @@ class GitDB {
    */
   static async init(config: Config): Promise<GitDB> {
     const gitDb = new GitDB(config);
-
     const collectionDirectoryNames = await fs.readdir(config.dbDir);
     const collectionPromises = collectionDirectoryNames.map(
       async (collectionName) => {
@@ -48,18 +47,20 @@ class GitDB {
     return gitDb;
   }
 
-  public async get(collectionName: string): Promise<Collection<any>> {
+  public get(collectionName: string): Collection<any> {
     return this.collections[collectionName];
   }
 
   public async createCollection(collectionName: string): Promise<string> {
-    await fse.ensureDir(this.config.dbDir);
+    await fse.ensureDir(path.resolve(this.config.dbDir, collectionName));
     const fileStrategy = new FileStrategy(
       path.resolve(this.config.dbDir, collectionName),
     );
-    const data = await fileStrategy.getAll();
-    const memoryStrategy = new MemoryStrategy(data);
-
+    let memoryStrategy;
+    if (this.config.cache) {
+      const data = await fileStrategy.getAll();
+      memoryStrategy = new MemoryStrategy(data);
+    }
     this.collections[collectionName] = new Collection(
       this,
       fileStrategy,
@@ -69,7 +70,7 @@ class GitDB {
     return collectionName;
   }
 
-  public async list(): Promise<string[]> {
+  public list(): string[] {
     return Object.keys(this.collections);
   }
 

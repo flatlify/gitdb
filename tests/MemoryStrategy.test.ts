@@ -1,4 +1,4 @@
-import { MemoryStrategy } from '../src/MemoryStrategy';
+import MemoryStrategy from '../src/MemoryStrategy';
 
 describe('getAll', () => {
   test('Can access data after creating', async () => {
@@ -125,7 +125,7 @@ describe('update', () => {
     updatedData.forEach((e) => expect(e.integer === NEW_VALUE));
   });
 
-  test('Do not modify id', async () => {
+  test("Doesn't not modify id", async () => {
     const OLD_ID = '2';
     const memoryStrategy = new MemoryStrategy([
       { id: '0', integer: 1 },
@@ -144,7 +144,7 @@ describe('update', () => {
     expect(updatedData.id).toBe(OLD_ID);
   });
 
-  test('Do not modify wrong data', async () => {
+  test("Doesn't not modify wrong data", async () => {
     const OLD_VALUE = 1;
     const NEW_VALUE = 25;
 
@@ -166,7 +166,7 @@ describe('update', () => {
     unUpdatedData.forEach((e) => expect(e.integer === OLD_VALUE));
   });
 
-  test('Work without data', async () => {
+  test('Works without data', async () => {
     const memoryStrategy = new MemoryStrategy<{ id: string; integer: number }>(
       [],
     );
@@ -196,7 +196,7 @@ describe('delete', () => {
     expect(updatedData.length).toBe(0);
   });
 
-  test('Do not delete wrong data', async () => {
+  test("Doesn't not delete wrong data", async () => {
     const memoryStrategy = new MemoryStrategy([
       { id: '0', integer: 4, searchValue: 1 },
       { id: '1', integer: 4, searchValue: 1 },
@@ -212,7 +212,7 @@ describe('delete', () => {
     expect(updatedData.length).toBe(1);
   });
 
-  test('Work without data', async () => {
+  test('Works without data', async () => {
     const memoryStrategy = new MemoryStrategy<{ id: string; integer: number }>(
       [],
     );

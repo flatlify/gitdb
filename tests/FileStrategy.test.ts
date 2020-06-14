@@ -1,8 +1,8 @@
-import { FileStrategy } from '../src/FileStrategy';
+import FileStrategy from '../src/FileStrategy';
 import * as fileDependency from '../src/utils/file';
 
 describe('getAll', () => {
-  test('Call readDocuments function', async () => {
+  test('Calls readDocuments function', async () => {
     const pathToFile = '/path/to/file';
 
     const mockReadDocuments = jest.spyOn(fileDependency, 'readDocuments');
@@ -20,7 +20,7 @@ describe('getAll', () => {
 });
 
 describe('getData', () => {
-  test('Call readDocuments function', async () => {
+  test('Calls readDocuments function', async () => {
     const pathToFile = '/path/to/file';
 
     const mockReadDocuments = jest.spyOn(fileDependency, 'readDocuments');
@@ -36,7 +36,7 @@ describe('getData', () => {
     mockReadDocuments.mockRestore();
   });
 
-  test('filterDocuments', async () => {
+  test('Filters documents', async () => {
     const pathToFile = '/path/to/file';
 
     const mockReadDocuments = jest.spyOn(fileDependency, 'readDocuments');
@@ -62,7 +62,7 @@ describe('getData', () => {
 });
 
 describe('insert', () => {
-  test('Call outputJson function', async () => {
+  test('Calls outputJson function', async () => {
     const pathToFile = '/path/to/file';
 
     const mockOutputJson = jest.spyOn(fileDependency, 'outputJson');
@@ -83,7 +83,7 @@ describe('insert', () => {
 });
 
 describe('update', () => {
-  test('Call readDocuments function', async () => {
+  test('Calls readDocuments function', async () => {
     const pathToFile = '/path/to/file';
 
     const mockReadDocuments = jest.spyOn(fileDependency, 'readDocuments');
@@ -102,7 +102,7 @@ describe('update', () => {
     mockReadDocuments.mockRestore();
   });
 
-  test('Call outputJson function', async () => {
+  test('Calls outputJson function', async () => {
     const pathToFile = '/path/to/file';
 
     const mockReadDocuments = jest.spyOn(fileDependency, 'readDocuments');
@@ -125,7 +125,7 @@ describe('update', () => {
     mockOutputJson.mockRestore();
   });
 
-  test('Call modifier function', async () => {
+  test('Calls modifier function', async () => {
     const pathToFile = '/path/to/file';
     const modifier = (e: any) => ({ ...e, number: 4 });
 
@@ -154,7 +154,7 @@ describe('update', () => {
 });
 
 describe('delete', () => {
-  test('Call readDocuments function', async () => {
+  test('Calls readDocuments function', async () => {
     const pathToFile = '/path/to/file';
 
     const mockReadDocuments = jest.spyOn(fileDependency, 'readDocuments');
@@ -171,7 +171,7 @@ describe('delete', () => {
     mockReadDocuments.mockRestore();
   });
 
-  test('Call remove function', async () => {
+  test('Calls remove function', async () => {
     const pathToFile = '/path/to/file';
 
     const mockReadDocuments = jest.spyOn(fileDependency, 'readDocuments');

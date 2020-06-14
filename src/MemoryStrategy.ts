@@ -1,7 +1,7 @@
-import { DBRecord } from './collection';
+import { DBRecord } from './Collection';
 import { Filter, SetCallback } from './collectionStrategy';
 
-export class MemoryStrategy<T extends DBRecord> {
+export default class MemoryStrategy<T extends DBRecord> {
   private data: any[];
 
   constructor(data: T[]) {
