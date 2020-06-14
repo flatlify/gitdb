@@ -6,18 +6,17 @@ import MemoryStrategy from '../src/MemoryStrategy';
 import GitDB from '../src/gitdb';
 import { promises as fsDependency, Dirent } from 'fs';
 import isoGit from 'isomorphic-git';
+import { createMockDB, DB_DIR } from './helpers';
 
 jest.mock('../src/FileStrategy');
 jest.mock('../src/MemoryStrategy');
 jest.mock('../src/Collection');
 
-const DB_DIR = '/dbDir';
-
 describe('init', () => {
   test('Uses readdir', async () => {
     const config = {
       cache: false,
-      dbDir: 'DB_DIR',
+      dbDir: DB_DIR,
     };
 
     const mockReadDir = jest
@@ -275,7 +274,7 @@ describe('Remove', () => {
 });
 
 describe('Commit', () => {
-  test('Calls git Ccmmit', async () => {
+  test('Calls git Commit', async () => {
     const mockIsoGitCommit = jest
       .spyOn(isoGit, 'commit')
       .mockImplementation(async () => 'commitSHA');
@@ -289,18 +288,3 @@ describe('Commit', () => {
     mockIsoGitCommit.mockRestore();
   });
 });
-
-async function createMockDB(cache = false): Promise<GitDB> {
-  const config = {
-    cache,
-    dbDir: DB_DIR,
-  };
-  const mockReadDir = jest
-    .spyOn(fsDependency, 'readdir')
-    .mockImplementation(async () => []);
-
-  const gitDb = await GitDB.init(config);
-  expect(fsDependency.readdir).toBeCalledTimes(1);
-  mockReadDir.mockRestore();
-  return gitDb;
-}
