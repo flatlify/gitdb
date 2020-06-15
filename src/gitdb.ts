@@ -24,7 +24,7 @@ class GitDB {
   collections: schema;
   gitRoot: string;
 
-  private constructor(config: Config) {
+  constructor(config: Config) {
     this.config = config;
     this.collections = {};
     /** ".." because it returns `path/to/file/.git` */
@@ -35,16 +35,14 @@ class GitDB {
    * Instantiates GitDB with a given config
    * @param config
    */
-  static async init(config: Config): Promise<GitDB> {
-    const gitDb = new GitDB(config);
-    const collectionDirectoryNames = await fs.readdir(config.dbDir);
+  async init(): Promise<void> {
+    const collectionDirectoryNames = await fs.readdir(this.config.dbDir);
     const collectionPromises = collectionDirectoryNames.map(
       async (collectionName) => {
-        gitDb.createCollection(collectionName);
+        this.createCollection(collectionName);
       },
     );
     await Promise.all(collectionPromises);
-    return gitDb;
   }
 
   public get(collectionName: string): Collection<any> {
