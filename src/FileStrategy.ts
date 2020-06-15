@@ -3,7 +3,7 @@ import path from 'path';
 import { remove, readDocuments, outputJson } from './utils/file';
 import { Filter, SetCallback } from './collectionStrategy';
 
-export default class FileStrategy<T extends DBRecord> {
+export class FileStrategy<T extends DBRecord> {
   private collectionPath: string;
 
   constructor(collectionPath: string) {
@@ -67,3 +67,5 @@ export default class FileStrategy<T extends DBRecord> {
     return filePaths;
   }
 }
+
+export default FileStrategy;

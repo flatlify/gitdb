@@ -14,7 +14,7 @@ enum gitStagingAreaStatus {
 /**
  * TODO add immutablejs to prevent array and object mutation
  */
-export default class Collection<T extends DBRecord> {
+export class Collection<T extends DBRecord> {
   private db: GitDB;
   fileStrategy: FileStrategy<T>;
   memoryStrategy?: MemoryStrategy<T>;
@@ -96,3 +96,5 @@ export default class Collection<T extends DBRecord> {
     return false;
   }
 }
+
+export default Collection;

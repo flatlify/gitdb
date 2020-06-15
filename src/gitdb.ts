@@ -19,7 +19,7 @@ interface Author {
 }
 
 type schema = Record<string, Collection<any>>;
-class GitDB {
+export class GitDB {
   config: Config;
   collections: schema;
   gitRoot: string;
