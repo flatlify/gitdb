@@ -2,7 +2,7 @@
   "name": "gitdb",
   "version": "0.1.0",
   "description": "A simple, robust and performant git-based database",
-  "main": "src/index.js",
+  "main": "src/index.ts",
   "directories": {
     "doc": "docs"
   },
