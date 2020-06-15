@@ -1,13 +1,12 @@
 import GitDB from './gitdb';
 import { v4 as uuidv4 } from 'uuid';
-import { FileStrategy } from './FileStrategy';
-import { MemoryStrategy } from './MemoryStrategy';
+import FileStrategy from './FileStrategy';
+import MemoryStrategy from './MemoryStrategy';
+import { Filter, SetCallback } from './collectionStrategy';
 export interface DBRecord {
   id: string;
 }
 
-export type Filter<T> = (document: T) => boolean;
-export type SetCallback<T> = (record: T) => T;
 enum gitStagingAreaStatus {
   add,
   remove,
@@ -45,8 +44,8 @@ export default class Collection<T extends DBRecord> {
     return filteredDocuments;
   }
 
-  public async insert(documentData: T): Promise<T> {
-    const newDocument = { id: uuidv4(), ...documentData };
+  public async insert(documentData: Omit<T, 'id'>): Promise<T> {
+    const newDocument: T = { id: uuidv4(), ...documentData } as T;
     const filePath = await this.fileStrategy.insert(newDocument);
 
     if (this.memoryStrategy) {
