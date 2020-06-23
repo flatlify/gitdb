@@ -1,3 +1,5 @@
-export * from './gitdb';
+export * from './GitDB';
 export * from './Collection';
-export * from './collectionStrategy';
+export * from './CollectionStrategy';
+export * from './MemoryStrategy';
+export * from './MemoryStrategy';

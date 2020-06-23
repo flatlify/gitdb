@@ -54,5 +54,4 @@ typings/
 .env
 .env.test
 
-
-
+lib

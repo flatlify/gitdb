@@ -1,4 +1,4 @@
-import * as fileUtils from '../src/utils/file';
+import * as fileUtils from './file';
 import fsExtendedDependency from 'fs-extra';
 import { promises as fsDependency } from 'fs';
 

@@ -1,5 +1,5 @@
 import { promises as fsDependency } from 'fs';
-import GitDB from '../src/gitdb';
+import GitDB from '../GitDB/GitDB';
 
 export const DB_DIR = '/dbDir';
 export async function createMockDB(cache = false): Promise<GitDB> {
@@ -11,7 +11,8 @@ export async function createMockDB(cache = false): Promise<GitDB> {
     .spyOn(fsDependency, 'readdir')
     .mockImplementation(async () => []);
 
-  const gitDb = await GitDB.init(config);
+  const gitDb = new GitDB(config);
+  await gitDb.init();
   expect(fsDependency.readdir).toBeCalledTimes(1);
   mockReadDir.mockRestore();
   return gitDb;

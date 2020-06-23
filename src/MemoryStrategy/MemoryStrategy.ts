@@ -1,5 +1,5 @@
-import { DBRecord } from './Collection';
-import { Filter, SetCallback } from './collectionStrategy';
+import { DBRecord } from '../Collection';
+import { Filter, SetCallback } from '../CollectionStrategy';
 
 export class MemoryStrategy<T extends DBRecord> {
   private data: any[];

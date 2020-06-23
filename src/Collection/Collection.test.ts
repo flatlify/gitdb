@@ -1,11 +1,11 @@
 // import fsWithCallbacks from 'fs';
-import Collection from '../src/Collection';
-import FileStrategy from '../src/FileStrategy';
-import MemoryStrategy from '../src/MemoryStrategy';
-import { createMockDB } from './helpers';
+import Collection from './Collection';
+import FileStrategy from '../FileStrategy/FileStrategy';
+import MemoryStrategy from '../MemoryStrategy/MemoryStrategy';
+import { createMockDB } from '../helpers/testHelpers';
 
-jest.mock('../src/FileStrategy');
-jest.mock('../src/MemoryStrategy');
+jest.mock('../FileStrategy/FileStrategy');
+jest.mock('../MemoryStrategy/MemoryStrategy');
 
 beforeEach(() => {
   // Clear all instances and calls to constructor and all methods:

@@ -12,6 +12,7 @@
   "rules": {
     "no-console": 2, // Means warning
     "prettier/prettier": 2, // Means error
-    "@typescript-eslint/no-use-before-define": "off"
+    "@typescript-eslint/no-use-before-define": "off",
+    "@typescript-eslint/ban-ts-ignore": "off"
   }
 }

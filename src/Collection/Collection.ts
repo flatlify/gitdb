@@ -1,8 +1,8 @@
-import GitDB from './gitdb';
+import GitDB from '../GitDB/GitDB';
 import { v4 as uuidv4 } from 'uuid';
-import FileStrategy from './FileStrategy';
-import MemoryStrategy from './MemoryStrategy';
-import { Filter, SetCallback } from './collectionStrategy';
+import FileStrategy from '../FileStrategy/FileStrategy';
+import MemoryStrategy from '../MemoryStrategy/MemoryStrategy';
+import { Filter, SetCallback } from '../CollectionStrategy/collectionStrategy';
 export interface DBRecord {
   id: string;
 }

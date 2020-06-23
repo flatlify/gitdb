@@ -1,16 +1,16 @@
 // import fsWithCallbacks from 'fs';
-import Collection from '../src/Collection';
-import FileStrategy from '../src/FileStrategy';
+import Collection from '../Collection/Collection';
+import { FileStrategy } from '../FileStrategy';
 import fsExtendedDependency from 'fs-extra';
-import MemoryStrategy from '../src/MemoryStrategy';
-import GitDB from '../src/gitdb';
+import { MemoryStrategy } from '../MemoryStrategy';
+import GitDB from './GitDB';
 import { promises as fsDependency, Dirent } from 'fs';
 import isoGit from 'isomorphic-git';
-import { createMockDB, DB_DIR } from './helpers';
+import { createMockDB, DB_DIR } from '../helpers/testHelpers';
 
-jest.mock('../src/FileStrategy');
-jest.mock('../src/MemoryStrategy');
-jest.mock('../src/Collection');
+jest.mock('../FileStrategy/FileStrategy');
+jest.mock('../MemoryStrategy/MemoryStrategy');
+jest.mock('../Collection/Collection');
 
 describe('init', () => {
   test('Uses readdir', async () => {
@@ -23,7 +23,9 @@ describe('init', () => {
       .spyOn(fsDependency, 'readdir')
       .mockImplementation(async () => []);
 
-    const gitDb = await GitDB.init(config);
+    const gitDb = new GitDB(config);
+    await gitDb.init();
+
     expect(fsDependency.readdir).toBeCalledTimes(1);
     mockReadDir.mockRestore();
   });
@@ -43,7 +45,8 @@ describe('init', () => {
       .spyOn(GitDB.prototype, 'createCollection')
       .mockImplementation(async (collectionName) => collectionName);
 
-    const gitDb = await GitDB.init(config);
+    const gitDb = new GitDB(config);
+    await gitDb.init();
 
     expect(GitDB.prototype.createCollection).toBeCalledTimes(2);
     expect(GitDB.prototype.createCollection).toHaveBeenNthCalledWith(
@@ -84,7 +87,8 @@ describe('get', () => {
         return collectionName;
       });
 
-    const gitDb = await GitDB.init(config);
+    const gitDb = new GitDB(config);
+    await gitDb.init();
     const receivedCollection = gitDb.get(testCollectionName);
 
     expect(receivedCollection).toBe(testCollection);
@@ -199,7 +203,9 @@ describe('list', () => {
 
         return collectionName;
       });
-    const gitDB = await GitDB.init(config);
+
+    const gitDB = new GitDB(config);
+    await gitDB.init();
 
     const collectionNames = gitDB.list();
 

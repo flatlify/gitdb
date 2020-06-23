@@ -1,11 +1,11 @@
 import fsWithCallbacks from 'fs';
 import fse from 'fs-extra';
 import path from 'path';
-import Collection from './Collection';
 import isoGit from 'isomorphic-git';
 import findGitRoot from 'find-git-root';
-import FileStrategy from './FileStrategy';
-import MemoryStrategy from './MemoryStrategy';
+import { Collection } from '../Collection';
+import { FileStrategy } from '../FileStrategy';
+import { MemoryStrategy } from '../MemoryStrategy';
 
 const fs = fsWithCallbacks.promises;
 interface Config {

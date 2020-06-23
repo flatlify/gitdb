@@ -1,4 +1,4 @@
-import MemoryStrategy from '../src/MemoryStrategy';
+import MemoryStrategy from './MemoryStrategy';
 
 describe('getAll', () => {
   test('Can access data after creating', async () => {

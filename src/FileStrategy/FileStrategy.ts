@@ -1,7 +1,7 @@
-import { DBRecord } from './Collection';
+import { DBRecord } from '../Collection/Collection';
 import path from 'path';
-import { remove, readDocuments, outputJson } from './utils/file';
-import { Filter, SetCallback } from './collectionStrategy';
+import { remove, readDocuments, outputJson } from '../utils/file/file';
+import { Filter, SetCallback } from '../CollectionStrategy/collectionStrategy';
 
 export class FileStrategy<T extends DBRecord> {
   private collectionPath: string;
