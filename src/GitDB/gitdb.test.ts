@@ -1,4 +1,3 @@
-// import fsWithCallbacks from 'fs';
 import Collection from '../Collection/Collection';
 import { FileStrategy } from '../FileStrategy';
 import fsExtendedDependency from 'fs-extra';

@@ -41,7 +41,7 @@ export class FileStrategy<T extends DBRecord> {
       const newDocument = { ...modifier(document), id: documentId };
 
       const filePath = path.resolve(this.collectionPath, `${documentId}.json`);
-
+      filePaths.push(filePath);
       await outputJson(filePath, newDocument);
       return newDocument;
     });

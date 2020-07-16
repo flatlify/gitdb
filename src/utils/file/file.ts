@@ -1,4 +1,4 @@
-import fsModule from 'fs';
+import * as fsModule from 'fs';
 import { outputJson as fseOutputJSON, remove as fseRemove } from 'fs-extra';
 
 const fs = fsModule.promises;

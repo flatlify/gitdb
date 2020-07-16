@@ -1,4 +1,4 @@
-import fsWithCallbacks from 'fs';
+import * as fsWithCallbacks from 'fs';
 import fse from 'fs-extra';
 import path from 'path';
 import isoGit from 'isomorphic-git';
@@ -39,7 +39,7 @@ export class GitDB {
     const collectionDirectoryNames = await fs.readdir(this.config.dbDir);
     const collectionPromises = collectionDirectoryNames.map(
       async (collectionName) => {
-        this.createCollection(collectionName);
+        this.loadCollection(collectionName);
       },
     );
     await Promise.all(collectionPromises);
@@ -50,7 +50,15 @@ export class GitDB {
   }
 
   public async createCollection(collectionName: string): Promise<string> {
-    await fse.ensureDir(path.resolve(this.config.dbDir, collectionName));
+    await fse.mkdir(path.resolve(this.config.dbDir, collectionName));
+    return this.initCollection(collectionName);
+  }
+
+  private async loadCollection(collectionName: string): Promise<string> {
+    return this.initCollection(collectionName);
+  }
+
+  private async initCollection(collectionName: string): Promise<string> {
     const fileStrategy = new FileStrategy(
       path.resolve(this.config.dbDir, collectionName),
     );
@@ -67,13 +75,16 @@ export class GitDB {
 
     return collectionName;
   }
-
   public list(): string[] {
     return Object.keys(this.collections);
   }
 
   public async delete(collectionName: string): Promise<string> {
-    await this.collections[collectionName].delete(() => true);
+    const collection = await this.collections[collectionName];
+    if (!collection) {
+      throw { msg: "Collection doesn't exist" };
+    }
+    collection.delete(() => true);
     await fse.remove(`${this.config.dbDir}/${collectionName}`);
 
     delete this.collections[collectionName];
