@@ -47,4 +47,3 @@ export class MemoryStrategy<T extends DBRecord>
     return true;
   }
 }
-export default MemoryStrategy;

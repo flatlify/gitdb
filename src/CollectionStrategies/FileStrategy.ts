@@ -71,5 +71,3 @@ export class FileStrategy<T extends DBRecord>
     return filePaths;
   }
 }
-
-export default FileStrategy;

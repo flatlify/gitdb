@@ -1,4 +1,4 @@
-import FileStrategy from './FileStrategy';
+import { FileStrategy } from './FileStrategy';
 import * as fileDependency from '../utils/file';
 
 describe('getAll', () => {

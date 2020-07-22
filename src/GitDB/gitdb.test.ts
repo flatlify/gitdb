@@ -7,8 +7,8 @@ import { promises as fsDependency, Dirent } from 'fs';
 import isoGit from 'isomorphic-git';
 import { createMockDB, DB_DIR } from '../utils/createMockDB';
 
-jest.mock('../FileStrategy/FileStrategy');
-jest.mock('../MemoryStrategy/MemoryStrategy');
+jest.mock('../CollectionStrategies/FileStrategy');
+jest.mock('../CollectionStrategies/MemoryStrategy');
 jest.mock('../Collection/Collection');
 
 describe('init', () => {
