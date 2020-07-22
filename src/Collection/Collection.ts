@@ -1,8 +1,6 @@
 import GitDB from '../GitDB/GitDB';
 import { v4 as uuidv4 } from 'uuid';
-import FileStrategy from '../FileStrategy/FileStrategy';
-import MemoryStrategy from '../MemoryStrategy/MemoryStrategy';
-import { Filter, SetCallback } from '../CollectionStrategy/collectionStrategy';
+import { FileStrategy, MemoryStrategy, Filter, SetCallback } from '../CollectionStrategies';
 export interface DBRecord {
   id: string;
 }
@@ -16,6 +14,7 @@ enum gitStagingAreaStatus {
  */
 export class Collection<T extends DBRecord> {
   private db: GitDB;
+  // @TODO: Replace FileStrategy and MemoryStrategy by CollectionStrategy
   fileStrategy: FileStrategy<T>;
   memoryStrategy?: MemoryStrategy<T>;
 

@@ -1,8 +1,8 @@
 // import fsWithCallbacks from 'fs';
 import Collection from './Collection';
-import FileStrategy from '../FileStrategy/FileStrategy';
-import MemoryStrategy from '../MemoryStrategy/MemoryStrategy';
-import { createMockDB } from '../helpers/testHelpers';
+import FileStrategy from '../CollectionStrategies/FileStrategy';
+import MemoryStrategy from '../CollectionStrategies/MemoryStrategy';
+import { createMockDB } from '../utils/createMockDB';
 
 jest.mock('../FileStrategy/FileStrategy');
 jest.mock('../MemoryStrategy/MemoryStrategy');
@@ -14,8 +14,6 @@ beforeEach(() => {
   //@ts-ignore
   MemoryStrategy.mockClear();
 });
-
-const DB_DIR = '/dbDir';
 
 describe('constructor', () => {
   test('Works', async () => {

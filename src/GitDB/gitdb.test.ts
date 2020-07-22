@@ -1,11 +1,11 @@
 import Collection from '../Collection/Collection';
-import { FileStrategy } from '../FileStrategy';
+import { FileStrategy } from '../CollectionStrategies';
 import fsExtendedDependency from 'fs-extra';
-import { MemoryStrategy } from '../MemoryStrategy';
+import { MemoryStrategy } from '../CollectionStrategies';
 import GitDB from './GitDB';
 import { promises as fsDependency, Dirent } from 'fs';
 import isoGit from 'isomorphic-git';
-import { createMockDB, DB_DIR } from '../helpers/testHelpers';
+import { createMockDB, DB_DIR } from '../utils/createMockDB';
 
 jest.mock('../FileStrategy/FileStrategy');
 jest.mock('../MemoryStrategy/MemoryStrategy');

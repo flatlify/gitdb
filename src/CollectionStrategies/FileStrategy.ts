@@ -1,9 +1,13 @@
 import { DBRecord } from '../Collection/Collection';
 import path from 'path';
-import { remove, readDocuments, outputJson } from '../utils/file/file';
-import { Filter, SetCallback } from '../CollectionStrategy/collectionStrategy';
+import { remove, readDocuments, outputJson } from '../utils/file';
+import { Filter, SetCallback } from './CollectionStrategy';
+// import { CollectionStrategy } from "./CollectionStrategy";
 
-export class FileStrategy<T extends DBRecord> {
+export class FileStrategy<T extends DBRecord>
+// @TODO: uncomment line below, make FileStrategy matching CollectionStrategy signature
+// implements CollectionStrategy
+{
   private collectionPath: string;
 
   constructor(collectionPath: string) {

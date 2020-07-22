@@ -1,0 +1,24 @@
+name: Unit tests
+
+env:
+  NPM_TOKEN: ${{secrets.NPM_TOKEN}}
+on:
+  pull_request:
+    branches:
+      - "*"
+jobs:
+  test:
+    name: Run Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 12
+          registry-url: https://npm.pkg.github.com/
+          scope: "@flatlify"
+      - run: sudo apt-get update
+      - run: npm i
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+      - run: npm run test

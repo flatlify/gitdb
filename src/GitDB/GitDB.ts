@@ -4,8 +4,8 @@ import path from 'path';
 import isoGit from 'isomorphic-git';
 import findGitRoot from 'find-git-root';
 import { Collection } from '../Collection';
-import { FileStrategy } from '../FileStrategy';
-import { MemoryStrategy } from '../MemoryStrategy';
+import { FileStrategy } from '../CollectionStrategies';
+import { MemoryStrategy } from '../CollectionStrategies';
 
 const fs = fsWithCallbacks.promises;
 interface Config {

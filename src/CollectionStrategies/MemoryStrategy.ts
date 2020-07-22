@@ -1,7 +1,11 @@
 import { DBRecord } from '../Collection';
-import { Filter, SetCallback } from '../CollectionStrategy';
+import { Filter, SetCallback } from './index';
+// import { CollectionStrategy } from "./CollectionStrategy";
 
-export class MemoryStrategy<T extends DBRecord> {
+export class MemoryStrategy<T extends DBRecord>
+// @TODO: uncomment line below, make FileStrategy matching CollectionStrategy signature
+// implements CollectionStrategy
+{
   private data: any[];
 
   constructor(data: T[]) {

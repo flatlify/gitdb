@@ -1,5 +1,5 @@
 import FileStrategy from './FileStrategy';
-import * as fileDependency from '../utils/file/file';
+import * as fileDependency from '../utils/file';
 
 describe('getAll', () => {
   test('Calls readDocuments function', async () => {
