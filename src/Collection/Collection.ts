@@ -5,7 +5,9 @@ import {
   MemoryStrategy,
   Filter,
   SetCallback,
+  CollectionStrategy,
 } from '../CollectionStrategies';
+import path from 'path';
 export interface DBRecord {
   id: string;
 }
@@ -19,16 +21,18 @@ enum gitStagingAreaStatus {
  */
 export class Collection<T extends DBRecord> {
   private db: GitDB;
-  // @TODO: Replace FileStrategy and MemoryStrategy by CollectionStrategy
-  fileStrategy: FileStrategy<T>;
-  memoryStrategy?: MemoryStrategy<T>;
+  private name: string;
+  fileStrategy: CollectionStrategy<T>;
+  memoryStrategy?: CollectionStrategy<T>;
 
   constructor(
     gitDb: GitDB,
+    name: string,
     fileStrategy: FileStrategy<T>,
     memoryStrategy?: MemoryStrategy<T>,
   ) {
     this.db = gitDb;
+    this.name = name;
     this.fileStrategy = fileStrategy;
     this.memoryStrategy = memoryStrategy;
   }
@@ -50,8 +54,12 @@ export class Collection<T extends DBRecord> {
 
   public async insert(documentData: Omit<T, 'id'>): Promise<T> {
     const newDocument: T = { id: uuidv4(), ...documentData } as T;
-    const filePath = await this.fileStrategy.insert(newDocument);
-
+    const document = await this.fileStrategy.insert(newDocument);
+    const filePath = path.resolve(
+      this.db.config.dbDir,
+      this.name,
+      `${document.id}.json`,
+    );
     if (this.memoryStrategy) {
       this.memoryStrategy.insert(newDocument);
     }
@@ -61,27 +69,33 @@ export class Collection<T extends DBRecord> {
   }
 
   public async update<K extends T>(
-    filter: Filter<K>,
-    modifier: SetCallback<T>,
-  ): Promise<string[]> {
-    const filePaths = await this.fileStrategy.update(filter, modifier);
+    filter: Filter<T>,
+    modifier: SetCallback<K, T>,
+  ): Promise<K[]> {
+    const documents = await this.fileStrategy.update(filter, modifier);
 
     if (this.memoryStrategy) {
       this.memoryStrategy.update(filter, modifier);
     }
+    const filePaths = documents.map((document) =>
+      path.resolve(this.db.config.dbDir, this.name, `${document.id}.json`),
+    );
     await this.checkForAutoCommit(filePaths, gitStagingAreaStatus.add);
-    return filePaths;
+    return documents;
   }
 
-  public async delete(filter: Filter<T>): Promise<string[]> {
-    const filePaths = await this.fileStrategy.delete(filter);
+  public async delete(filter: Filter<T>): Promise<T[]> {
+    const documents = await this.fileStrategy.delete(filter);
 
     if (this.memoryStrategy) {
       this.memoryStrategy.delete(filter);
     }
+    const filePaths = documents.map((document) =>
+      path.resolve(this.db.config.dbDir, this.name, `${document.id}.json`),
+    );
     await this.checkForAutoCommit(filePaths, gitStagingAreaStatus.remove);
 
-    return filePaths;
+    return documents;
   }
 
   private async checkForAutoCommit(

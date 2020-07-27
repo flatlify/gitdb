@@ -1,195 +1,67 @@
-import { FileStrategy } from './FileStrategy';
-import * as fileDependency from '../utils/file';
+import { DBRecord } from '../Collection/Collection';
+import path from 'path';
+import { remove, readDocuments, outputJson } from '../utils/file';
+import { Filter, SetCallback, CollectionStrategy } from './CollectionStrategy';
 
-describe('getAll', () => {
-  test('Calls readDocuments function', async () => {
-    const pathToFile = '/path/to/file';
+export class FileStrategy<T extends DBRecord> implements CollectionStrategy<T> {
+  private collectionPath: string;
 
-    const mockReadDocuments = jest.spyOn(fileDependency, 'readDocuments');
-    mockReadDocuments.mockImplementation(async () => {
-      return [];
-    });
+  constructor(collectionPath: string) {
+    this.collectionPath = collectionPath;
+  }
 
-    const fileStrategy = new FileStrategy(pathToFile);
-    fileStrategy.getAll();
+  public getAll(): Promise<T[]> {
+    return readDocuments(this.collectionPath);
+  }
 
-    expect(fileDependency.readDocuments).toBeCalledTimes(1);
-    expect(fileDependency.readDocuments).toBeCalledWith(pathToFile);
-    mockReadDocuments.mockRestore();
-  });
-});
+  public async getData(callback: Filter<T>): Promise<T[]> {
+    const documents = await readDocuments<T>(this.collectionPath);
+    return documents.filter(callback);
+  }
 
-describe('getData', () => {
-  test('Calls readDocuments function', async () => {
-    const pathToFile = '/path/to/file';
-
-    const mockReadDocuments = jest.spyOn(fileDependency, 'readDocuments');
-    mockReadDocuments.mockImplementation(async () => {
-      return [];
-    });
-
-    const fileStrategy = new FileStrategy(pathToFile);
-    fileStrategy.getAll();
-
-    expect(fileDependency.readDocuments).toBeCalledTimes(1);
-    expect(fileDependency.readDocuments).toBeCalledWith(pathToFile);
-    mockReadDocuments.mockRestore();
-  });
-
-  test('Filters documents', async () => {
-    const pathToFile = '/path/to/file';
-
-    const mockReadDocuments = jest.spyOn(fileDependency, 'readDocuments');
-    mockReadDocuments.mockImplementation(async () => {
-      return [
-        { id: '1' },
-        { id: '3' },
-        { id: '4' },
-        { id: '25' },
-        { id: '35' },
-      ];
-    });
-
-    const fileStrategy = new FileStrategy(pathToFile);
-    const filteredDocuments = await fileStrategy.getData(
-      (e) => Number(e.id) > 4,
+  public async insert(documentData: T): Promise<T> {
+    const filePath = path.resolve(
+      this.collectionPath,
+      `${documentData.id}.json`,
     );
+    outputJson(filePath, documentData);
 
-    expect(filteredDocuments.length).toBe(2);
+    return documentData;
+  }
 
-    mockReadDocuments.mockRestore();
-  });
-});
+  public async update<K extends T>(
+    filter: Filter<T>,
+    modifier: SetCallback<K, T>,
+  ): Promise<K[]> {
+    const filePaths: string[] = [];
 
-describe('insert', () => {
-  test('Calls outputJson function', async () => {
-    const pathToFile = '/path/to/file';
+    const documents = await readDocuments<T>(this.collectionPath);
+    const newDataPromises = (documents.filter(filter).map(async (document) => {
+      const documentId = document.id;
+      const newDocument = { ...modifier(document), id: documentId };
 
-    const mockOutputJson = jest.spyOn(fileDependency, 'outputJson');
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
-    mockOutputJson.mockImplementation(async () => {});
+      const filePath = path.resolve(this.collectionPath, `${documentId}.json`);
+      filePaths.push(filePath);
+      await outputJson(filePath, newDocument);
+      return newDocument;
+    }) as unknown) as Promise<K>[];
 
-    const document = { id: '24' };
-    const fileStrategy = new FileStrategy(pathToFile);
-    fileStrategy.insert(document);
+    const newData = await Promise.all(newDataPromises);
+    return newData;
+  }
 
-    expect(fileDependency.outputJson).toBeCalledTimes(1);
-    expect(fileDependency.outputJson).toBeCalledWith(
-      `${pathToFile}/${document.id}.json`,
-      document,
-    );
-    mockOutputJson.mockRestore();
-  });
-});
+  public async delete(filter: Filter<T>): Promise<T[]> {
+    const documents = await readDocuments<T>(this.collectionPath);
 
-describe('update', () => {
-  test('Calls readDocuments function', async () => {
-    const pathToFile = '/path/to/file';
+    const removedPromises = documents.filter(filter).map(async (document) => {
+      const filePath = path.resolve(this.collectionPath, `${document.id}.json`);
 
-    const mockReadDocuments = jest.spyOn(fileDependency, 'readDocuments');
-    mockReadDocuments.mockImplementation(async () => {
-      return [];
+      await remove(filePath);
+      return document;
     });
+    const removedDocuments = await Promise.all(removedPromises);
+    return removedDocuments;
+  }
+}
 
-    const fileStrategy = new FileStrategy(pathToFile);
-    fileStrategy.update(
-      (e) => e.id === '4',
-      (e) => ({ ...e, number: 4 }),
-    );
-
-    expect(fileDependency.readDocuments).toBeCalledTimes(1);
-    expect(fileDependency.readDocuments).toBeCalledWith(pathToFile);
-    mockReadDocuments.mockRestore();
-  });
-
-  test('Calls outputJson function', async () => {
-    const pathToFile = '/path/to/file';
-
-    const mockReadDocuments = jest.spyOn(fileDependency, 'readDocuments');
-    mockReadDocuments.mockImplementation(async () => {
-      return [{ id: '4' }];
-    });
-
-    const mockOutputJson = jest.spyOn(fileDependency, 'outputJson');
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
-    mockOutputJson.mockImplementation(async () => {});
-
-    const fileStrategy = new FileStrategy(pathToFile);
-    await fileStrategy.update(
-      (e) => e.id === '4',
-      (e) => ({ ...e, number: 4 }),
-    );
-
-    expect(fileDependency.outputJson).toBeCalledTimes(1);
-    mockReadDocuments.mockRestore();
-    mockOutputJson.mockRestore();
-  });
-
-  test('Calls modifier function', async () => {
-    const pathToFile = '/path/to/file';
-    const modifier = (e: any) => ({ ...e, number: 4 });
-
-    const mockModifier = jest.fn(modifier);
-    const mockReadDocuments = jest.spyOn(fileDependency, 'readDocuments');
-    const mockOutputJson = jest.spyOn(fileDependency, 'outputJson');
-
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
-    mockOutputJson.mockImplementation(async () => {});
-
-    const searchObject = { id: '4' };
-    mockReadDocuments.mockImplementation(async () => {
-      return [{ id: '1' }, searchObject];
-    });
-
-    const fileStrategy = new FileStrategy(pathToFile);
-    await fileStrategy.update((e) => e.id === '4', mockModifier);
-
-    expect(mockModifier).toBeCalledTimes(1);
-    expect(mockModifier).toBeCalledWith(searchObject);
-
-    mockReadDocuments.mockRestore();
-    mockModifier.mockRestore();
-    mockOutputJson.mockRestore();
-  });
-});
-
-describe('delete', () => {
-  test('Calls readDocuments function', async () => {
-    const pathToFile = '/path/to/file';
-
-    const mockReadDocuments = jest.spyOn(fileDependency, 'readDocuments');
-    mockReadDocuments.mockImplementation(async () => {
-      return [];
-    });
-
-    const fileStrategy = new FileStrategy(pathToFile);
-    fileStrategy.delete((e) => e.id === '4');
-
-    expect(fileDependency.readDocuments).toBeCalledTimes(1);
-    expect(fileDependency.readDocuments).toBeCalledWith(pathToFile);
-
-    mockReadDocuments.mockRestore();
-  });
-
-  test('Calls remove function', async () => {
-    const pathToFile = '/path/to/file';
-
-    const mockReadDocuments = jest.spyOn(fileDependency, 'readDocuments');
-    mockReadDocuments.mockImplementation(async () => {
-      return [{ id: '4' }];
-    });
-
-    const mockRemove = jest.spyOn(fileDependency, 'remove');
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
-    mockRemove.mockImplementation(async () => {});
-
-    const fileStrategy = new FileStrategy(pathToFile);
-    await fileStrategy.delete((e) => e.id === '4');
-
-    expect(fileDependency.remove).toBeCalledTimes(1);
-    expect(fileDependency.remove).toBeCalledWith(`${pathToFile}/4.json`);
-
-    mockReadDocuments.mockRestore();
-    mockRemove.mockRestore();
-  });
-});
+export default FileStrategy;

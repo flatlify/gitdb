@@ -13,7 +13,7 @@ export async function readFile(
   return documentData;
 }
 
-export async function readDocuments(collectionPath: string): Promise<any[]> {
+export async function readDocuments<T>(collectionPath: string): Promise<T[]> {
   const documentNames = await fs.readdir(collectionPath);
 
   const documentPromises = documentNames.map((documentName) =>

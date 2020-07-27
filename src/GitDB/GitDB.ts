@@ -69,6 +69,7 @@ export class GitDB {
     }
     this.collections[collectionName] = new Collection(
       this,
+      collectionName,
       fileStrategy,
       memoryStrategy,
     );

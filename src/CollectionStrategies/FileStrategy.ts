@@ -1,13 +1,9 @@
 import { DBRecord } from '../Collection/Collection';
 import path from 'path';
 import { remove, readDocuments, outputJson } from '../utils/file';
-import { Filter, SetCallback } from './CollectionStrategy';
-// import { CollectionStrategy } from "./CollectionStrategy";
+import { Filter, SetCallback, CollectionStrategy } from './CollectionStrategy';
 
-export class FileStrategy<T extends DBRecord>
-// @TODO: uncomment line below, make FileStrategy matching CollectionStrategy signature
-// implements CollectionStrategy
-{
+export class FileStrategy<T extends DBRecord> implements CollectionStrategy<T> {
   private collectionPath: string;
 
   constructor(collectionPath: string) {
@@ -19,28 +15,28 @@ export class FileStrategy<T extends DBRecord>
   }
 
   public async getData(callback: Filter<T>): Promise<T[]> {
-    const documents = await readDocuments(this.collectionPath);
+    const documents = await readDocuments<T>(this.collectionPath);
     return documents.filter(callback);
   }
 
-  public async insert(documentData: T): Promise<string> {
+  public async insert(documentData: T): Promise<T> {
     const filePath = path.resolve(
       this.collectionPath,
       `${documentData.id}.json`,
     );
     outputJson(filePath, documentData);
 
-    return filePath;
+    return documentData;
   }
 
   public async update<K extends T>(
-    filter: Filter<K>,
-    modifier: SetCallback<T>,
-  ): Promise<string[]> {
+    filter: Filter<T>,
+    modifier: SetCallback<K, T>,
+  ): Promise<K[]> {
     const filePaths: string[] = [];
 
-    const documents = await readDocuments(this.collectionPath);
-    const newDataPromises = documents.filter(filter).map(async (document) => {
+    const documents = await readDocuments<T>(this.collectionPath);
+    const newDataPromises = (documents.filter(filter).map(async (document) => {
       const documentId = document.id;
       const newDocument = { ...modifier(document), id: documentId };
 
@@ -48,26 +44,24 @@ export class FileStrategy<T extends DBRecord>
       filePaths.push(filePath);
       await outputJson(filePath, newDocument);
       return newDocument;
-    });
+    }) as unknown) as Promise<K>[];
 
-    await Promise.all(newDataPromises);
-    return filePaths;
+    const newData = await Promise.all(newDataPromises);
+    return newData;
   }
 
-  public async delete(filter: Filter<T>): Promise<string[]> {
-    const removedPromises: any[] = [];
-    const filePaths: string[] = [];
+  public async delete(filter: Filter<T>): Promise<T[]> {
+    const documents = await readDocuments<T>(this.collectionPath);
 
-    const documents = await readDocuments(this.collectionPath);
-
-    documents.filter(filter).map((document) => {
+    const removedPromises = documents.filter(filter).map(async (document) => {
       const filePath = path.resolve(this.collectionPath, `${document.id}.json`);
 
-      filePaths.push(filePath);
-      const removedPromise = remove(filePath);
-      removedPromises.push(removedPromise);
+      await remove(filePath);
+      return document;
     });
-    await Promise.all(removedPromises);
-    return filePaths;
+    const removedDocuments = await Promise.all(removedPromises);
+    return removedDocuments;
   }
 }
+
+export default FileStrategy;
