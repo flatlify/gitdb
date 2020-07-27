@@ -10,7 +10,7 @@
   "scripts": {
     "build": "rimraf ./lib && tsc",
     "test:watch": "jest --watch",
-    "lint": "eslint . --ext .ts",
+    "lint": "eslint . --quiet  --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
     "prettier": "prettier --config .prettierrc 'src/**/*.ts' --write",
     "test": "npm run lint && jest"

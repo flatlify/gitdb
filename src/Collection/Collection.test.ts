@@ -21,7 +21,12 @@ describe('constructor', () => {
     const fileStrategy = new FileStrategy('path');
     const memoryStrategy = new MemoryStrategy([]);
 
-    const collection = new Collection(gitDB, fileStrategy, memoryStrategy);
+    const collection = new Collection(
+      gitDB,
+      'name',
+      fileStrategy,
+      memoryStrategy,
+    );
 
     expect(collection instanceof Collection).toBe(true);
   });
@@ -35,7 +40,7 @@ describe('getAll', () => {
     //@ts-ignore
     const mockFileStrategyInstance = FileStrategy.mock.instances[0];
 
-    const collection = new Collection(gitDB, fileStrategy);
+    const collection = new Collection(gitDB, 'name', fileStrategy);
 
     await collection.getAll();
 
@@ -52,7 +57,12 @@ describe('getAll', () => {
     //@ts-ignore
     const mockMemoryStrategyInstance = MemoryStrategy.mock.instances[0];
 
-    const collection = new Collection(gitDB, fileStrategy, memoryStrategy);
+    const collection = new Collection(
+      gitDB,
+      'name',
+      fileStrategy,
+      memoryStrategy,
+    );
 
     await collection.getAll();
 
@@ -69,7 +79,7 @@ describe('getData', () => {
     //@ts-ignore
     const mockFileStrategyInstance = FileStrategy.mock.instances[0];
 
-    const collection = new Collection(gitDB, fileStrategy);
+    const collection = new Collection(gitDB, 'name', fileStrategy);
 
     await collection.getAll();
 
@@ -86,7 +96,12 @@ describe('getData', () => {
     //@ts-ignore
     const mockMemoryStrategyInstance = MemoryStrategy.mock.instances[0];
 
-    const collection = new Collection(gitDB, fileStrategy, memoryStrategy);
+    const collection = new Collection(
+      gitDB,
+      'name',
+      fileStrategy,
+      memoryStrategy,
+    );
 
     await collection.getData(() => true);
 
@@ -103,7 +118,7 @@ describe('insert', () => {
     //@ts-ignore
     const mockFileStrategyInstance = FileStrategy.mock.instances[0];
 
-    const collection = new Collection(gitDB, fileStrategy);
+    const collection = new Collection(gitDB, 'name', fileStrategy);
 
     await collection.getAll();
 
@@ -120,7 +135,12 @@ describe('insert', () => {
     //@ts-ignore
     const mockMemoryStrategyInstance = MemoryStrategy.mock.instances[0];
 
-    const collection = new Collection(gitDB, fileStrategy, memoryStrategy);
+    const collection = new Collection(
+      gitDB,
+      'name',
+      fileStrategy,
+      memoryStrategy,
+    );
 
     await collection.insert(() => true);
 
@@ -137,7 +157,7 @@ describe('update', () => {
     //@ts-ignore
     const mockFileStrategyInstance = FileStrategy.mock.instances[0];
 
-    const collection = new Collection(gitDB, fileStrategy);
+    const collection = new Collection(gitDB, 'name', fileStrategy);
 
     await collection.getAll();
 
@@ -154,7 +174,12 @@ describe('update', () => {
     //@ts-ignore
     const mockMemoryStrategyInstance = MemoryStrategy.mock.instances[0];
 
-    const collection = new Collection(gitDB, fileStrategy, memoryStrategy);
+    const collection = new Collection(
+      gitDB,
+      'name',
+      fileStrategy,
+      memoryStrategy,
+    );
 
     await collection.update(
       () => true,
@@ -174,7 +199,7 @@ describe('delete', () => {
     //@ts-ignore
     const mockFileStrategyInstance = FileStrategy.mock.instances[0];
 
-    const collection = new Collection(gitDB, fileStrategy);
+    const collection = new Collection(gitDB, 'name', fileStrategy);
 
     await collection.getAll();
 
@@ -191,7 +216,12 @@ describe('delete', () => {
     //@ts-ignore
     const mockMemoryStrategyInstance = MemoryStrategy.mock.instances[0];
 
-    const collection = new Collection(gitDB, fileStrategy, memoryStrategy);
+    const collection = new Collection(
+      gitDB,
+      'name',
+      fileStrategy,
+      memoryStrategy,
+    );
 
     await collection.delete(() => true);
 
