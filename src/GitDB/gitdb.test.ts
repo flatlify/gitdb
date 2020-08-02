@@ -82,6 +82,7 @@ describe('get', () => {
       .mockImplementation(async function (this: GitDB, collectionName) {
         this.collections[
           collectionName
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ] = (testCollection as unknown) as Collection<any>;
         return collectionName;
       });
@@ -198,6 +199,7 @@ describe('list', () => {
       .mockImplementation(async function (this: GitDB, collectionName) {
         this.collections[
           collectionName
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ] = (collectionName as unknown) as Collection<any>;
 
         return collectionName;

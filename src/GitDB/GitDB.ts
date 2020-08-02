@@ -18,6 +18,7 @@ interface Author {
   email: string;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type schema = Record<string, Collection<any>>;
 export class GitDB {
   config: Config;
@@ -44,7 +45,7 @@ export class GitDB {
     );
     await Promise.all(collectionPromises);
   }
-
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public get(collectionName: string): Collection<any> {
     return this.collections[collectionName];
   }
@@ -123,6 +124,7 @@ export class GitDB {
     if (!message) {
       message = `Commit files: ${relativeFilePaths}`;
     }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const sha = await isoGit.commit({
       dir: this.gitRoot,
       message,
@@ -131,6 +133,7 @@ export class GitDB {
     return message;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public async reset(files: string[] | undefined): Promise<void> {
     return Promise.resolve();
   }
