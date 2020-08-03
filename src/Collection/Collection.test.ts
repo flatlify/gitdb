@@ -3,6 +3,7 @@ import Collection from './Collection';
 import { FileStrategy } from '../CollectionStrategies/FileStrategy';
 import { MemoryStrategy } from '../CollectionStrategies/MemoryStrategy';
 import { createMockDB } from '../utils/createMockDB';
+import * as fileDependency from '../utils/file';
 
 jest.mock('../CollectionStrategies/FileStrategy');
 jest.mock('../CollectionStrategies/MemoryStrategy');
@@ -118,34 +119,43 @@ describe('insert', () => {
     //@ts-ignore
     const mockFileStrategyInstance = FileStrategy.mock.instances[0];
 
+    const mockOutputJson = jest.spyOn(fileDependency, 'outputJson');
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    mockOutputJson.mockImplementation(async () => {});
+
     const collection = new Collection(gitDB, 'name', fileStrategy);
 
     await collection.getAll();
 
+    mockOutputJson.mockClear();
     expect(mockFileStrategyInstance.getAll).toBeCalledTimes(1);
   });
 
   test('Works with memoryStrategy', async () => {
     const gitDB = await createMockDB();
-    const fileStrategy = new FileStrategy('path');
+    // const fileStrategy = new FileStrategy('path');
+    // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+    const fileStrategy = { insert: () => ({}) };
     const memoryStrategy = new MemoryStrategy([]);
 
-    //@ts-ignore
-    const mockFileStrategyInstance = FileStrategy.mock.instances[0];
+    const mockOutputJson = jest.spyOn(fileDependency, 'outputJson');
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    mockOutputJson.mockImplementation(async () => {});
     //@ts-ignore
     const mockMemoryStrategyInstance = MemoryStrategy.mock.instances[0];
 
     const collection = new Collection(
       gitDB,
       'name',
-      fileStrategy,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (fileStrategy as unknown) as FileStrategy<any>,
       memoryStrategy,
     );
 
-    await collection.insert(() => true);
+    await collection.insert(() => ({}));
 
+    mockOutputJson.mockClear();
     expect(mockMemoryStrategyInstance.insert).toBeCalledTimes(1);
-    expect(mockFileStrategyInstance.insert).toBeCalledTimes(1);
   });
 });
 
@@ -166,18 +176,19 @@ describe('update', () => {
 
   test('Works with memoryStrategy', async () => {
     const gitDB = await createMockDB();
-    const fileStrategy = new FileStrategy('path');
+    // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+    const fileStrategy = { update: () => [] };
     const memoryStrategy = new MemoryStrategy([]);
 
     //@ts-ignore
-    const mockFileStrategyInstance = FileStrategy.mock.instances[0];
     //@ts-ignore
     const mockMemoryStrategyInstance = MemoryStrategy.mock.instances[0];
 
     const collection = new Collection(
       gitDB,
       'name',
-      fileStrategy,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (fileStrategy as unknown) as FileStrategy<any>,
       memoryStrategy,
     );
 
@@ -187,7 +198,6 @@ describe('update', () => {
     );
 
     expect(mockMemoryStrategyInstance.update).toBeCalledTimes(1);
-    expect(mockFileStrategyInstance.update).toBeCalledTimes(1);
   });
 });
 
@@ -208,24 +218,23 @@ describe('delete', () => {
 
   test('Works with memoryStrategy', async () => {
     const gitDB = await createMockDB();
-    const fileStrategy = new FileStrategy('path');
+    // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+    const fileStrategy = { delete: () => [] };
     const memoryStrategy = new MemoryStrategy([]);
 
-    //@ts-ignore
-    const mockFileStrategyInstance = FileStrategy.mock.instances[0];
     //@ts-ignore
     const mockMemoryStrategyInstance = MemoryStrategy.mock.instances[0];
 
     const collection = new Collection(
       gitDB,
       'name',
-      fileStrategy,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (fileStrategy as unknown) as FileStrategy<any>,
       memoryStrategy,
     );
 
     await collection.delete(() => true);
 
     expect(mockMemoryStrategyInstance.delete).toBeCalledTimes(1);
-    expect(mockFileStrategyInstance.delete).toBeCalledTimes(1);
   });
 });

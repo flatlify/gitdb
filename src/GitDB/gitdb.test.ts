@@ -7,9 +7,10 @@ import { promises as fsDependency, Dirent } from 'fs';
 import isoGit from 'isomorphic-git';
 import { createMockDB, DB_DIR } from '../utils/createMockDB';
 
-jest.mock('../CollectionStrategies/FileStrategy');
-jest.mock('../CollectionStrategies/MemoryStrategy');
-jest.mock('../Collection/Collection');
+jest.mock('../CollectionStrategies/FileStrategy.ts');
+// jest.mock('../CollectionStrategies/FileStrategy.ts');
+jest.mock('../CollectionStrategies/MemoryStrategy.ts');
+jest.mock('../Collection/Collection.ts');
 
 describe('init', () => {
   test('Uses readdir', async () => {
@@ -41,18 +42,23 @@ describe('init', () => {
       .mockImplementation(async () => [collectionOne, collectionTwo]);
 
     const mockReadCollection = jest
-      .spyOn(GitDB.prototype, 'createCollection')
+      //@ts-ignore
+      .spyOn(GitDB.prototype, 'loadCollection')
+      //@ts-ignore
+
       .mockImplementation(async (collectionName) => collectionName);
 
     const gitDb = new GitDB(config);
     await gitDb.init();
-
-    expect(GitDB.prototype.createCollection).toBeCalledTimes(2);
-    expect(GitDB.prototype.createCollection).toHaveBeenNthCalledWith(
+    //@ts-ignore
+    expect(GitDB.prototype.loadCollection).toBeCalledTimes(2);
+    //@ts-ignore
+    expect(GitDB.prototype.loadCollection).toHaveBeenNthCalledWith(
       1,
       collectionOne,
     );
-    expect(GitDB.prototype.createCollection).toHaveBeenNthCalledWith(
+    //@ts-ignore
+    expect(GitDB.prototype.loadCollection).toHaveBeenNthCalledWith(
       2,
       collectionTwo,
     );
@@ -78,7 +84,9 @@ describe('get', () => {
       ]);
 
     const mockReadCollection = jest
-      .spyOn(GitDB.prototype, 'createCollection')
+      //@ts-ignore
+      .spyOn(GitDB.prototype, 'loadCollection')
+      //@ts-ignore
       .mockImplementation(async function (this: GitDB, collectionName) {
         this.collections[
           collectionName

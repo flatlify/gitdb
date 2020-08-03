@@ -34,7 +34,6 @@ export class FileStrategy<T extends DBRecord> implements CollectionStrategy<T> {
     modifier: SetCallback<K, T>,
   ): Promise<K[]> {
     const filePaths: string[] = [];
-
     const documents = await readDocuments<T>(this.collectionPath);
     const newDataPromises = (documents.filter(filter).map(async (document) => {
       const documentId = document.id;

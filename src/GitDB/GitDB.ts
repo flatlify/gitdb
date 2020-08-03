@@ -51,7 +51,7 @@ export class GitDB {
   }
 
   public async createCollection(collectionName: string): Promise<string> {
-    await fse.mkdir(path.resolve(this.config.dbDir, collectionName));
+    await fse.ensureDir(path.resolve(this.config.dbDir, collectionName));
     return this.initCollection(collectionName);
   }
 
