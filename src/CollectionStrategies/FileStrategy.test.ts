@@ -1,5 +1,5 @@
-import FileStrategy from './FileStrategy';
-import * as fileDependency from '../utils/file/file';
+import { FileStrategy } from './FileStrategy';
+import * as fileDependency from '../utils/file';
 
 describe('getAll', () => {
   test('Calls readDocuments function', async () => {
@@ -127,7 +127,8 @@ describe('update', () => {
 
   test('Calls modifier function', async () => {
     const pathToFile = '/path/to/file';
-    const modifier = (e: any) => ({ ...e, number: 4 });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const modifier = (e: any): any => ({ ...e, number: 4 });
 
     const mockModifier = jest.fn(modifier);
     const mockReadDocuments = jest.spyOn(fileDependency, 'readDocuments');

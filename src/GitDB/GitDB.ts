@@ -4,8 +4,8 @@ import path from 'path';
 import isoGit from 'isomorphic-git';
 import findGitRoot from 'find-git-root';
 import { Collection } from '../Collection';
-import { FileStrategy } from '../FileStrategy';
-import { MemoryStrategy } from '../MemoryStrategy';
+import { FileStrategy } from '../CollectionStrategies';
+import { MemoryStrategy } from '../CollectionStrategies';
 
 const fs = fsWithCallbacks.promises;
 interface Config {
@@ -18,6 +18,7 @@ interface Author {
   email: string;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type schema = Record<string, Collection<any>>;
 export class GitDB {
   config: Config;
@@ -44,13 +45,13 @@ export class GitDB {
     );
     await Promise.all(collectionPromises);
   }
-
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public get(collectionName: string): Collection<any> {
     return this.collections[collectionName];
   }
 
   public async createCollection(collectionName: string): Promise<string> {
-    await fse.mkdir(path.resolve(this.config.dbDir, collectionName));
+    await fse.ensureDir(path.resolve(this.config.dbDir, collectionName));
     return this.initCollection(collectionName);
   }
 
@@ -69,6 +70,7 @@ export class GitDB {
     }
     this.collections[collectionName] = new Collection(
       this,
+      collectionName,
       fileStrategy,
       memoryStrategy,
     );
@@ -122,6 +124,7 @@ export class GitDB {
     if (!message) {
       message = `Commit files: ${relativeFilePaths}`;
     }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const sha = await isoGit.commit({
       dir: this.gitRoot,
       message,
@@ -130,6 +133,7 @@ export class GitDB {
     return message;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public async reset(files: string[] | undefined): Promise<void> {
     return Promise.resolve();
   }

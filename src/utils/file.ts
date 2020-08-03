@@ -6,6 +6,7 @@ const fs = fsModule.promises;
 export async function readFile(
   collectionPath: string,
   documentName: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<any> {
   const documentPath = `${collectionPath}/${documentName}`;
   const document = await fs.readFile(documentPath, 'utf8');
@@ -13,7 +14,7 @@ export async function readFile(
   return documentData;
 }
 
-export async function readDocuments(collectionPath: string): Promise<any[]> {
+export async function readDocuments<T>(collectionPath: string): Promise<T[]> {
   const documentNames = await fs.readdir(collectionPath);
 
   const documentPromises = documentNames.map((documentName) =>
@@ -25,6 +26,7 @@ export async function readDocuments(collectionPath: string): Promise<any[]> {
 
 export async function outputJson(
   filePath: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   documentData: any,
 ): Promise<void> {
   return fseOutputJSON(filePath, documentData);

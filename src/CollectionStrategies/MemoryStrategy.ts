@@ -1,8 +1,9 @@
 import { DBRecord } from '../Collection';
-import { Filter, SetCallback } from '../CollectionStrategy';
+import { Filter, SetCallback, CollectionStrategy } from './CollectionStrategy';
 
-export class MemoryStrategy<T extends DBRecord> {
-  private data: any[];
+export class MemoryStrategy<T extends DBRecord>
+  implements CollectionStrategy<T> {
+  private data: T[];
 
   constructor(data: T[]) {
     this.data = data || [];
@@ -22,25 +23,31 @@ export class MemoryStrategy<T extends DBRecord> {
   }
 
   public async update<K extends T>(
-    filter: Filter<K>,
-    modifier: SetCallback<T>,
-  ): Promise<void> {
-    const newDocuments = this.data.filter(filter).map((document) => {
+    filter: Filter<T>,
+    modifier: SetCallback<K, T>,
+  ): Promise<K[]> {
+    const updatedDocuments: K[] = [];
+    this.data.filter(filter).forEach((document) => {
       const documentId = document.id;
       const newDocument = { ...modifier(document), id: documentId };
-      return newDocument;
+      for (const key in newDocument) {
+        //@ts-ignore
+        //? what to do with string any properties
+        document[key] = newDocument[key];
+      }
+      updatedDocuments.push(newDocument);
     });
-    this.data = newDocuments;
+    return updatedDocuments;
   }
 
-  public async delete(filter: Filter<T>): Promise<boolean> {
+  public async delete(filter: Filter<T>): Promise<T[]> {
+    const deleted = this.data.filter(filter);
     const newData = this.data.filter(
       (document) =>
         // we want to delete filtered elements, not save them
         !filter(document),
     );
     this.data = newData;
-    return true;
+    return deleted;
   }
 }
-export default MemoryStrategy;
